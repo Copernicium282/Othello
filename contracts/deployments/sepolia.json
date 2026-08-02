@@ -1,0 +1,17 @@
+{
+  "chainId": 11155111,
+  "network": "ETH Sepolia",
+  "deployer": "0x7F99f10684e4F70051f3de5Ceb9fDC71a38aF0Fd",
+  "contracts": {
+    "YinYang": "0x3e42135A7eDaE76eeF8Bc29F1E9B500D3F2Cb8D0",
+    "OthelloELO": "0x1D6a0eA1f7E68E4B0B0421cbb1e4b63c0A1df23b",
+    "OthelloTreasury": "0x8b34c28e0B0B7c1C90B690fEdA9d673CFB54b790",
+    "OthelloGame": "0x06441a070Ef37B3aC4a6D1C23522C95D036Ee873"
+  },
+  "verified": {
+    "provider": "Sourcify",
+    "status": "exact_match",
+    "compiler": "0.8.35",
+    "evmVersion": "osaka"
+  }
+}

@@ -10,5 +10,11 @@
       "name": "v5.6.1",
       "rev": "5fd1781b1454fd1ef8e722282f86f9293cacf256"
     }
+  },
+  "lib/prb-math": {
+    "tag": {
+      "name": "v4.1.2",
+      "rev": "4daeacdeacdf90997117e39b8970c1346eed9e8b"
+    }
   }
 }
