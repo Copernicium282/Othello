@@ -6,6 +6,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Interfaces.sol";
 
 contract OthelloGame is Ownable {
+    error NotYourTurn();
+    error IllegalMove();
+    error GameNotActive();
+    error PositionOccupied();
+    error MinimumStake();
+    error StakeTransferFailed();
+    error GameStatusInvalid();
+    error WrongOpponent();
+    error ReentrancyGuard();
+    error FailedSendEth();
+
     struct Player{
         address playerAddr;
         uint64 dailyCount;
@@ -50,24 +61,10 @@ contract OthelloGame is Ownable {
         white = INIT_WHITE_BITBOARD;
     }
 
-    /// @notice Occupancy checker of a position in board
-    /// @dev Notes:
-    /// - Right-shift bits "pos" times
-    /// - use bitwise AND with 1 to return occupancy value
-    /// @param bits the Bitboard
-    /// @param pos the position to check
-    /// @return occupancy occupancy of the position
     function _isOccupied(uint64 bits, uint8 pos) internal pure returns (bool occupancy){
         return (bits >> pos) & 1 == 1;
     }
 
-    /// @notice Occupancy setter of a position in board
-    /// @dev Notes:
-    /// - Left-shift 1 "pos" times, creating a bitmask at "pos" position with value 1
-    /// - use bitwise OR to set the bit at "pos" to 1 if not already set
-    /// @param bits the Bitboard
-    /// @param pos the position to check
-    /// @return updatedBits updated Bitboard
     function _setBit(uint64 bits, uint8 pos) internal pure returns (uint64 updatedBits){
         return bits | ((uint64)(1) << pos);
     }
@@ -120,7 +117,12 @@ contract OthelloGame is Ownable {
     error Exceeded_Daily_Cap(uint256 waitTime);
     mapping(address player => mapping(address opponent => uint256 lastPlayed)) public cooldownPerOpponent;
     error Cooldown_Valid(uint256 waitTime);
-    mapping(address challenger => address[] opponents) public contestantHistory;
+
+    struct History {
+        address[10] opponents;
+        uint8 len;
+    }
+    mapping(address => History) public contestantHistory;
 
     function antiFarmingChecksHelper(address opponent) internal returns (bool){
         if(block.timestamp/86400 > dayIndex){
@@ -146,10 +148,9 @@ contract OthelloGame is Ownable {
         Player memory Challenger = dailyGamesCap[dayIndex][msg.sender];
         Player memory Opponent = dailyGamesCap[dayIndex][opponent];
         Challenger.stake = challengerStakeAmount;
-        require(Challenger.stake >= MIN_STAKE, "Minimum amount to stake for a match is 10 YYG");
+        if(Challenger.stake < MIN_STAKE) revert MinimumStake();
 
-        bool check = YYG_TOKEN.transferFrom(msg.sender, address(this), Challenger.stake);
-        require(check, "Stake transfer unsuccessful");
+        if(!YYG_TOKEN.transferFrom(msg.sender, address(this), Challenger.stake)) revert StakeTransferFailed();
 
         Game storage game = games[nextGameId];
         game.status = Status.PENDING;
@@ -157,16 +158,16 @@ contract OthelloGame is Ownable {
         game.p2 = Opponent;
         game.p1.playerAddr = msg.sender;
         game.p2.playerAddr = opponent;
-        nextGameId++;
+        unchecked { nextGameId++; }
     }
 
     modifier onlyOpponent(uint256 gameId) {
-        require(msg.sender == games[gameId].p2.playerAddr, "Only the opponent can accept this game invitation");
+        if(msg.sender != games[gameId].p2.playerAddr) revert WrongOpponent();
         _;
     }
 
     function acceptGame(uint256 gameId, uint256 opponentStakeAmount) public onlyOpponent(gameId){
-        require(games[gameId].status == Status.PENDING, "Game status invalid (!= PENDING");
+        if(games[gameId].status != Status.PENDING) revert GameStatusInvalid();
         Player memory Challenger = games[gameId].p1;
         Player memory Opponent = games[gameId].p2;
         Opponent.stake = opponentStakeAmount;
@@ -174,8 +175,7 @@ contract OthelloGame is Ownable {
 
         antiFarmingChecksHelper(Challenger.playerAddr);
 
-        bool check = YYG_TOKEN.transferFrom(Opponent.playerAddr, address(this), Opponent.stake);
-        require(check, "Stake transfer unsuccessful");
+        if(!YYG_TOKEN.transferFrom(Opponent.playerAddr, address(this), Opponent.stake)) revert StakeTransferFailed();
 
         games[gameId].status = Status.ACTIVE;
         games[gameId].blackBits = INIT_BLACK_BITBOARD;
@@ -200,40 +200,41 @@ contract OthelloGame is Ownable {
     }
 
     function makeMove(uint256 gameId, uint8 pos) public {
-        require(games[gameId].status == Status.ACTIVE, "Game must be created and accepted in order to make a move!");
+        Game storage game = games[gameId];
+        if(game.status != Status.ACTIVE) revert GameNotActive();
 
         uint64 myBits;
         uint64 opBits;
 
-        if(games[gameId].blackToMove == true){
-            require(msg.sender == games[gameId].p1.playerAddr, "You must wait for the other player to move!");
+        if(game.blackToMove == true){
+            if(msg.sender != game.p1.playerAddr) revert NotYourTurn();
 
-            myBits = games[gameId].blackBits;
-            opBits = games[gameId].whiteBits;
+            myBits = game.blackBits;
+            opBits = game.whiteBits;
         } else {
-            require(msg.sender == games[gameId].p2.playerAddr, "You must wait for the other player to move!");
+            if(msg.sender != game.p2.playerAddr) revert NotYourTurn();
 
-            myBits = games[gameId].whiteBits;
-            opBits = games[gameId].blackBits;
+            myBits = game.whiteBits;
+            opBits = game.blackBits;
         }
 
         uint64 flips = _getFlips(myBits, opBits, pos);
-        require(!(_isOccupied(myBits, pos) || _isOccupied(opBits, pos)), "Position selected is non-empty!");
-        require(flips != 0, "Illegal Move");
+        if(_isOccupied(myBits, pos) || _isOccupied(opBits, pos)) revert PositionOccupied();
+        if(flips == 0) revert IllegalMove();
 
         uint64 bit = uint64(1) << pos;
         myBits = myBits | flips | bit;
         opBits = opBits ^ flips;
-        if(games[gameId].blackToMove == true){
-            games[gameId].blackBits = myBits;
-            games[gameId].whiteBits = opBits;
+        if(game.blackToMove == true){
+            game.blackBits = myBits;
+            game.whiteBits = opBits;
         } else {
-            games[gameId].whiteBits = myBits;
-            games[gameId].blackBits = opBits;
+            game.whiteBits = myBits;
+            game.blackBits = opBits;
         }
 
-        games[gameId].blackToMove = !games[gameId].blackToMove;
-        games[gameId].lastMoveBlock = block.number;
+        game.blackToMove = !game.blackToMove;
+        game.lastMoveBlock = block.number;
 
         if((myBits|opBits) == 0xFFFFFFFFFFFFFFFF){
             _settle(gameId);
@@ -244,40 +245,33 @@ contract OthelloGame is Ownable {
                     _settle(gameId);
                 } else {
                     // Other player has no legal moves => pass back to current player
-                    games[gameId].blackToMove = !games[gameId].blackToMove;
+                    game.blackToMove = !game.blackToMove;
                 }
             }
         }
     }
 
     /// @notice Counts number of bits that are 1 in a 64-bit number
-    /// @dev Notes:
-    /// - 64-bit input x e.g. 0b...10110011... - we want to count every 1-bit
-    /// - Line 1 - count pairs x = x − ((x >> 1) & 0x5555555555555555) mask = 0101… each 2-bit chunk now holds the count of 1s in that chunk (0–2)
-    /// - Line 2 - merge pairs to nibbles x = (x & 0x3333333333333333) + ((x >> 2) & 0x3333333333333333) mask = 0011… each 4-bit nibble now holds count of 1s in that nibble (0–4)
-    /// - Line 3 - merge nibbles to bytes x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0F mask = 00001111… each byte now holds count of 1s in that byte (0–8)
-    /// Line 4 - sum all 8 bytes via multiply trick × 0x0101010101010101, accumulates all bytes into top byte to >> 56 extracts it
-    /// @param x Bitboard to evaluate
-    /// @return bits number of bits that are 1
     function popcount(uint64 x) internal pure returns (uint8) {
         uint256 w = x; // widened so intermediate sums cannot overflow
-        w = w - ((w >> 1) & 0x5555555555555555);
-        w = (w & 0x3333333333333333) + ((w >> 2) & 0x3333333333333333);
-        w = (w + (w >> 4)) & 0x0F0F0F0F0F0F0F0F;
+        unchecked {
+            w = w - ((w >> 1) & 0x5555555555555555);
+            w = (w & 0x3333333333333333) + ((w >> 2) & 0x3333333333333333);
+            w = (w + (w >> 4)) & 0x0F0F0F0F0F0F0F0F;
+        }
         return uint8((w * 0x0101010101010101) >> 56);
     }
 
     function distinctOpponents(address player) internal view returns (bool) {
-        address[] memory history = contestantHistory[player];
-        uint256 len = history.length;
+        History storage history = contestantHistory[player];
 
-        uint8 start = uint8(len>10 ? len-10 : 0);
+        uint8 start = uint8(history.len>10 ? history.len-10 : 0);
         uint256 distinctCount = 0;
 
         address[10] memory seen;
 
-        for(uint8 i=start; i<len; i++){
-            address opp = history[i];
+        for(uint8 i=start; i<history.len; i++){
+            address opp = history.opponents[i];
             bool alreadySeen = false;
 
             for(uint8 j=0; j<distinctCount; j++){
@@ -300,10 +294,14 @@ contract OthelloGame is Ownable {
     // Reentrancy guard
     uint256 private _locked = 1;
     modifier lock() {
-        require(_locked == 1, "Reentrancy");
+        if(_locked != 1) revert ReentrancyGuard();
         _locked = 2;
         _;
         _locked = 1;
+    }
+
+    function approveTreasury() external onlyOwner {
+        YYG_TOKEN.approve(address(othelloTreasury), type(uint256).max);
     }
 
     function _settle(uint256 gameId) internal lock{
@@ -321,15 +319,30 @@ contract OthelloGame is Ownable {
 
         // History updates
         games[gameId].status = Status.FINISHED;
-        contestantHistory[Challenger.playerAddr].push(Opponent.playerAddr);
-        contestantHistory[Opponent.playerAddr].push(Challenger.playerAddr);
+        {
+            History storage hC = contestantHistory[Challenger.playerAddr];
+            if(hC.len < 10) {
+                hC.opponents[hC.len] = Opponent.playerAddr;
+                hC.len++;
+            } else {
+                for(uint8 k=0; k<9; k++) hC.opponents[k] = hC.opponents[k+1];
+                hC.opponents[9] = Opponent.playerAddr;
+            }
+        }
+        {
+            History storage hO = contestantHistory[Opponent.playerAddr];
+            if(hO.len < 10) {
+                hO.opponents[hO.len] = Challenger.playerAddr;
+                hO.len++;
+            } else {
+                for(uint8 k=0; k<9; k++) hO.opponents[k] = hO.opponents[k+1];
+                hO.opponents[9] = Challenger.playerAddr;
+            }
+        }
 
         if(eloDiff <= 400e18){
             if (blackCount > whiteCount) {
-                bool check = YYG_TOKEN.transfer(Challenger.playerAddr, gameStake*96/100);
-                require(check, "Failed to settle Challenger stake");
-
-                YYG_TOKEN.approve(address(othelloTreasury), gameStake*4/100);
+                if(!YYG_TOKEN.transfer(Challenger.playerAddr, gameStake*96/100)) revert StakeTransferFailed();
                 othelloTreasury.receive4Percent(gameStake*4/100);
 
                 if(distinctOpponents(Challenger.playerAddr) && distinctOpponents(Opponent.playerAddr)){
@@ -337,10 +350,7 @@ contract OthelloGame is Ownable {
                 }
             }
             else if (whiteCount > blackCount) {
-                bool check = YYG_TOKEN.transfer(Opponent.playerAddr, gameStake*96/100);
-                require(check, "Failed to settle Opponent stake");
-
-                YYG_TOKEN.approve(address(othelloTreasury), gameStake*4/100);
+                if(!YYG_TOKEN.transfer(Opponent.playerAddr, gameStake*96/100)) revert StakeTransferFailed();
                 othelloTreasury.receive4Percent(gameStake*4/100);
 
                 if(distinctOpponents(Opponent.playerAddr) && distinctOpponents(Challenger.playerAddr)){
@@ -349,25 +359,14 @@ contract OthelloGame is Ownable {
             }
             else {
                 // In case of draw, both players get back 96% of their stakes, while the treasury keeps the rest
-
-                bool check = YYG_TOKEN.transfer(Challenger.playerAddr, Challenger.stake*96/100);
-                require(check, "Failed to settle Challenger stake");
-                check = YYG_TOKEN.transfer(Opponent.playerAddr, Opponent.stake*96/100);
-                require(check, "Failed to settle Opponent stake");
-
-                YYG_TOKEN.approve(address(othelloTreasury), gameStake*4/100);
+                if(!YYG_TOKEN.transfer(Challenger.playerAddr, Challenger.stake*96/100)) revert StakeTransferFailed();
+                if(!YYG_TOKEN.transfer(Opponent.playerAddr, Opponent.stake*96/100)) revert StakeTransferFailed();
                 othelloTreasury.receive4Percent(gameStake*4/100);
             }
         } else {
-            // In case of a big ELO diff, we prioritise ELO changes more than stake reward (which can be gamed, and the lower rated player has a 10% chance of winning according to ELO calculations, so the higher rated one is sure to win approx. 9 out of 10 games), hence we just return both players 96% of their stakes back and keep the rest in treasury
-            // As we have implemented the distinctOpponents checker, gaming the system to make player's alt accounts get more ELO fast would now be heavily difficult since it would need atleast 3 distinct addresses to play the games against, and still lose most money to the treasury
-
-            bool check = YYG_TOKEN.transfer(Challenger.playerAddr, Challenger.stake*96/100);
-            require(check, "Failed to settle stake");
-            check = YYG_TOKEN.transfer(Opponent.playerAddr, Opponent.stake*96/100);
-            require(check, "Failed to settle stake");
-
-            YYG_TOKEN.approve(address(othelloTreasury), gameStake*4/100);
+            // In case of a big ELO diff, we prioritise ELO changes more than stake reward
+            if(!YYG_TOKEN.transfer(Challenger.playerAddr, Challenger.stake*96/100)) revert StakeTransferFailed();
+            if(!YYG_TOKEN.transfer(Opponent.playerAddr, Opponent.stake*96/100)) revert StakeTransferFailed();
             othelloTreasury.receive4Percent(gameStake*4/100);
 
             if(distinctOpponents(Challenger.playerAddr) && distinctOpponents(Opponent.playerAddr)){

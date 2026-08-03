@@ -6,6 +6,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Interfaces.sol";
 
 contract OthelloTreasury is Ownable {
+    error UnauthorizedCaller();
+    error SeasonNotEnded();
+    error NoTreasuryBalance();
+    error TransferFailed();
+
     IERC20 immutable YYG_TOKEN;
     IOthelloELO immutable OthelloELO_Contract;
     address public OthelloGame_Contract;
@@ -23,25 +28,21 @@ contract OthelloTreasury is Ownable {
     }
 
     modifier onlyGame() {
-        require(msg.sender == OthelloGame_Contract, "Invalid Game Contract");
+        if(msg.sender != OthelloGame_Contract) revert UnauthorizedCaller();
 	_;
     }
 
     function receive4Percent(uint256 amount) external onlyGame{
-        bool check = YYG_TOKEN.transferFrom(msg.sender, address(this), amount);
-        require(check, "Failed to recieve 4% stake from Game");
+        if(!YYG_TOKEN.transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
     }
 
     function settleSeason(address[3] calldata top3) external{
-        require(block.timestamp >= seasonDeadline, "Season not ended");
+        if(block.timestamp < seasonDeadline) revert SeasonNotEnded();
         uint256 pot = YYG_TOKEN.balanceOf(address(this));
-        require(pot > 0, "No treasury balance");
-        bool check = YYG_TOKEN.transfer(top3[0], pot*50/100);
-        require(check, "Failed to send reward to TOP1");
-        check = YYG_TOKEN.transfer(top3[1], pot*30/100);
-        require(check, "Failed to send reward to TOP2");
-        check = YYG_TOKEN.transfer(top3[2], pot*20/100);
-        require(check, "Failed to send reward to TOP3");
+        if(pot == 0) revert NoTreasuryBalance();
+        if(!YYG_TOKEN.transfer(top3[0], pot*50/100)) revert TransferFailed();
+        if(!YYG_TOKEN.transfer(top3[1], pot*30/100)) revert TransferFailed();
+        if(!YYG_TOKEN.transfer(top3[2], pot*20/100)) revert TransferFailed();
 
         OthelloELO_Contract.resetSeason();
         seasonDeadline = block.timestamp + SEASON_DURATION;

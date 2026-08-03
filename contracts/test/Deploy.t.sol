@@ -52,14 +52,14 @@ contract DeployTest is Test {
     function test_EloOnlyAcceptsFromGame() public {
         // A random address calling recordResult should revert
         vm.prank(makeAddr("attacker"));
-        vm.expectRevert("Invalid Game Contract");
+        vm.expectRevert(OthelloELO.UnauthorizedCaller.selector);
         elo.recordResult(makeAddr("winner"), makeAddr("loser"));
     }
 
     function test_TreasuryOnlyAcceptsFromGame() public {
         // A random address calling receive4Percent should revert
         vm.prank(makeAddr("attacker"));
-        vm.expectRevert("Invalid Game Contract");
+        vm.expectRevert(OthelloTreasury.UnauthorizedCaller.selector);
         treasury.receive4Percent(100e18);
     }
 

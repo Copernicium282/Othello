@@ -5,6 +5,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract YinYang is ERC20, Ownable {
+    error ZeroWrap();
+    error ZeroAmount();
+    error ReentrancyGuard();
+    error FailedSendEth();
+
     constructor()
         ERC20("YinYang", "YYG")
         Ownable(msg.sender)
@@ -15,24 +20,24 @@ contract YinYang is ERC20, Ownable {
     }
 
     function wrap() public payable {
-        require(msg.value > 0, "give sepolia eth bro");
+        if(msg.value == 0) revert ZeroWrap();
         _mint(msg.sender, msg.value*100000);
     }
 
     // Reentrancy guard
     uint256 private _locked = 1;
     modifier lock() {
-        require(_locked == 1, "Reentrancy");
+        if(_locked != 1) revert ReentrancyGuard();
         _locked = 2;
         _;
         _locked = 1;
     }
 
     function unwrap(uint256 amount) public lock {
-        require(amount > 0, "amount must be greater than 0");
+        if(amount == 0) revert ZeroAmount();
 
         _burn(msg.sender, amount);
         (bool sent, ) = msg.sender.call{value: amount/100000}("");
-        require(sent, "Failed to send Ether");
+        if(!sent) revert FailedSendEth();
     }
 }

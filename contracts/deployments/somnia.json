@@ -1,0 +1,14 @@
+{
+  "chainId": 50312,
+  "network": "Somnia Shannon Testnet",
+  "deployer": "0x7F99f10684e4F70051f3de5Ceb9fDC71a38aF0Fd",
+  "contracts": {
+    "YinYang": "0x602E38982c6115C533b3762e24EDd8740458F1b0",
+    "OthelloELO": "0xD14564264F47a0756713467Bc7C36CF174566Db1",
+    "OthelloTreasury": "0xEF60391672aBc91DB1c9E21a1E23FBA33153dF76",
+    "OthelloGame": "0xAbC9F69426F2eCDC0cC5149F71fE6b76af007028"
+  },
+  "rpc": "https://rpc.ankr.com/somnia_testnet",
+  "compiler": "0.8.35",
+  "evm_version": "cancun"
+}

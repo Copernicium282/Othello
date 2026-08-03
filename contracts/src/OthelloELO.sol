@@ -5,6 +5,9 @@ import "prb-math/SD59x18.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract OthelloELO is Ownable {
+    error UnauthorizedCaller();
+    error EloDiffTooLarge();
+
     mapping(uint256 currSeason => mapping(address player => uint256 eloPlayer)) public elo;
     uint256 public currSeason;
     address public OthelloGame;
@@ -17,12 +20,12 @@ contract OthelloELO is Ownable {
     }
 
     modifier onlyGame() {
-        require(msg.sender == OthelloGame, "Invalid Game Contract");
+        if(msg.sender != OthelloGame) revert UnauthorizedCaller();
 	_;
     }
 
     modifier onlyGameOrTreasury() {
-        require(msg.sender == OthelloGame || msg.sender == OthelloTreasury, "Not authorized");
+        if(msg.sender != OthelloGame && msg.sender != OthelloTreasury) revert UnauthorizedCaller();
         _;
     }
 
@@ -35,7 +38,7 @@ contract OthelloELO is Ownable {
     }
 
     function resetSeason() external onlyGameOrTreasury {
-        currSeason +=1;
+        unchecked { currSeason += 1; }
     }
 
     function getELO(address player) public returns (uint256){
@@ -60,7 +63,7 @@ contract OthelloELO is Ownable {
         int256 eloLoser = int256(getELO(loser));
         int256 diff = eloLoser - eloWinner;
 
-        require(-800e18 <= diff && diff <= 800e18, "ELO diff larger than expected");
+        if(diff < -800e18 || diff > 800e18) revert EloDiffTooLarge();
         SD59x18 ELOdiff = sd(diff).div(sd(400e18));
         SD59x18 experimental = sd(10e18).pow(ELOdiff);
         SD59x18 expectedScore = sd(1e18).div(sd(1e18).add(experimental));

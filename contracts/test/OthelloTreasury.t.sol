@@ -39,13 +39,13 @@ contract OthelloTreasuryTest is Test {
 
     function testReceive4Percent_NonGameReverts() public {
         vm.prank(alice);
-        vm.expectRevert("Invalid Game Contract");
+        vm.expectRevert(OthelloTreasury.UnauthorizedCaller.selector);
         treasury.receive4Percent(100e18);
     }
 
     function testReceive4Percent_GameCanCall() public {
         // Game address must have approved Treasury to spend YYG via transferFrom
-        // In setUp, owner funded treasury with 1000e18 — here we test the pull mechanic
+        // In setUp, owner funded treasury with 1000e18, here we test the pull mechanic
         // by having the gameAddr hold and approve YYG.
         vm.deal(gameAddr, 10 ether);
         vm.startPrank(gameAddr);
@@ -85,11 +85,11 @@ contract OthelloTreasuryTest is Test {
         vm.prank(owner);
         elo.setTreasury(address(freshTreasury));
 
-        // Warp to only 1 day — deadline is 30 days from deploy
+        // Warp to only 1 day, deadline is 30 days from deploy
         vm.warp(block.timestamp + 1 days);
 
         address[3] memory top3 = [alice, bob, carol];
-        vm.expectRevert("Season not ended");
+        vm.expectRevert(OthelloTreasury.SeasonNotEnded.selector);
         freshTreasury.settleSeason(top3);
     }
 
@@ -139,7 +139,7 @@ contract OthelloTreasuryTest is Test {
         vm.warp(block.timestamp + 30 days);
 
         address[3] memory top3 = [alice, bob, carol];
-        vm.expectRevert("No treasury balance");
+        vm.expectRevert(OthelloTreasury.NoTreasuryBalance.selector);
         emptyTreasury.settleSeason(top3);
     }
 }

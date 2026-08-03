@@ -1,17 +1,17 @@
 # Othello.s
 
-Fully on-chain 2-player Othello (Reversi) on ETH Sepolia. Every move is a transaction, the board is two `uint64` bitboards, and the winner gets 96% of the combined stake. A 4% fee flows into a seasonal treasury that pays top-ranked players by ELO monthly.
+Fully on-chain 2-player Othello (Reversi) on Somnia Shannon testnet. Every move is a transaction, the board is two `uint64` bitboards, and the winner gets 96% of the combined stake. A 4% fee flows into a seasonal treasury that pays top-ranked players by ELO monthly.
 
-## Contracts (Sepolia)
+## Contracts (Somnia Shannon)
 
 | Contract | Address |
 |----------|---------|
-| YinYang (ERC-20 wrap) | `0x3e42135A7eDaE76eeF8Bc29F1E9B500D3F2Cb8D0` |
-| OthelloELO | `0x1D6a0eA1f7E68E4B0B0421cbb1e4b63c0A1df23b` |
-| OthelloTreasury | `0x8b34c28e0B0B7c1C90B690fEdA9d673CFB54b790` |
-| OthelloGame | `0x06441a070Ef37B3aC4a6D1C23522C95D036Ee873` |
+| YinYang (ERC-20 wrap) | `0x602E38982c6115C533b3762e24EDd8740458F1b0` |
+| OthelloELO | `0xD14564264F47a0756713467Bc7C36CF174566Db1` |
+| OthelloTreasury | `0xEF60391672aBc91DB1c9E21a1E23FBA33153dF76` |
+| OthelloGame | `0xAbC9F69426F2eCDC0cC5149F71fE6b76af007028` |
 
-All verified on Sourcify (exact match). Compiler 0.8.35.
+Compiler 0.8.35, EVM target Cancun. Chain ID: `50312`.
 
 ## How it works
 
@@ -24,6 +24,15 @@ All verified on Sourcify (exact match). Compiler 0.8.35.
 7. ELO ratings update on-chain after each game
 
 Anti-farming: per-address daily cap (20 games), same-opponent cooldown (1 hour), opponent diversity requirement (3 distinct opponents in last 10 games before ELO counts), and a +/-400 ELO matchmaking band.
+
+## Why Somnia Shannon?
+
+Originally deployed on ETH Sepolia. Migrated to Somnia Shannon testnet (chain 50312) because:
+
+- **100ms block times** vs Sepolia's 12s. Every move is a tx, at 12s blocks a 60-move game takes ~12 minutes of wait. At 100ms, it feels instant.
+- **Fully EVM-compatible.** Same Solidity, same Foundry, same toolchain. Migration = change RPC + redeploy.
+- **Gas costs are manageable.** Base fee ~6 Gwei. A full game (~60 moves) costs ~0.06 STT. 1 STT/day from the Google Cloud faucet covers ~14 games/day.
+- **Minimized event payloads.** Somnia charges 13x more per log topic than Ethereum. Events emit only `gameId`, `position`, and `player`, no board state.
 
 ## Stack
 
@@ -82,13 +91,24 @@ Requires a `.env` in `contracts/`:
 
 ```
 PRIVATE_KEY=0x...
-SEPOLIA_RPC_URL=https://rpc.sepolia.org
+SOMNIA_RPC_URL=https://rpc.ankr.com/somnia_testnet
 ```
 
 ```bash
 cd contracts
 source .env
-forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify --private-key $PRIVATE_KEY
+
+# Deploy each contract individually (vm.startBroadcast has gas estimation issues on Somnia)
+forge create --broadcast --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY src/YinYang.sol:YinYang
+forge create --broadcast --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY src/OthelloELO.sol:OthelloELO --constructor-args <DEPLOYER>
+forge create --broadcast --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY src/OthelloTreasury.sol:OthelloTreasury --constructor-args <YYG> <ELO> <DEPLOYER>
+forge create --broadcast --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY src/OthelloGame.sol:OthelloGame --constructor-args <YYG> <ELO> <TREASURY> <DEPLOYER>
+
+# Wire contracts
+cast send --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY <ELO> "setGame(address)" <GAME>
+cast send --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY <ELO> "setTreasury(address)" <TREASURY>
+cast send --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY <TREASURY> "setGame(address)" <GAME>
+cast send --rpc-url $SOMNIA_RPC_URL --private-key $PRIVATE_KEY <GAME> "approveTreasury()"
 ```
 
 ## License

@@ -27,6 +27,7 @@ contract DeployScript is Script {
         elo.setGame(address(game));
         elo.setTreasury(address(treasury));
         treasury.setGame(address(game));
+        game.approveTreasury();
 
         console2.log("Wiring complete:");
         console2.log("  elo.game =>", address(game));

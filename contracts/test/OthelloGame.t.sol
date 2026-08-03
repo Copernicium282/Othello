@@ -221,7 +221,7 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         assertEq(bb, uint64(0x0000000810000000), "initial black bits after accept");
         assertEq(wb, uint64(0x0000001008000000), "initial white bits after accept");
 
-        // Step 3: Alice (black) plays position 19 — flips white at 27
+        // Step 3: Alice (black) plays position 19, flips white at 27
         vm.prank(alice);
         harness.makeMove(0, 19);
 
