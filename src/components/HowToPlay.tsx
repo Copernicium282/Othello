@@ -11,6 +11,11 @@ export function HowToPlay() {
         occupies d4 and e5. Black always moves first. The game is famously described as
         "a minute to learn, a lifetime to master."
       </p>
+      <img
+        src="/images/how_to_play_othello_0.png"
+        alt="Starting position — four discs in the center"
+        className="howtoplay-img"
+      />
 
       <h2>Rules</h2>
       <p>
@@ -19,13 +24,39 @@ export function HowToPlay() {
         diagonally. To outflank means there is an unbroken line of opponent discs between
         your newly placed disc and one of your existing discs on the other side.
       </p>
+      <img
+        src="/images/how_to_play_othello_1.png"
+        alt="Black's legal moves shown as translucent discs"
+        className="howtoplay-img"
+      />
       <p>
         All outflanked discs are flipped to your colour in a single move. After flipping,
-        those discs now belong to you and can be used to outflank on future turns. If you
-        have no valid moves, your turn passes to your opponent. The game ends when neither
-        player can place a disc. The player with the most discs on the board wins. If both
-        players have the same number of discs, the game is a draw.
+        those discs now belong to you and can be used to outflank on future turns.
       </p>
+      <img
+        src="/images/how_to_play_othello_2.png"
+        alt="After Black places a disc, one white disc is flipped"
+        className="howtoplay-img"
+      />
+      <p>
+        If you have no valid moves, your turn passes to your opponent. White now plays
+        under the same rules with the roles reversed.
+      </p>
+      <img
+        src="/images/how_to_play_othello_3.png"
+        alt="White's legal move options"
+        className="howtoplay-img"
+      />
+      <p>
+        The game ends when neither player can place a disc. The player with the most
+        discs on the board wins. If both players have the same number of discs, the game
+        is a draw.
+      </p>
+      <img
+        src="/images/how_to_play_othello_4.png"
+        alt="After White plays, one black disc is flipped"
+        className="howtoplay-img"
+      />
 
       <h2>Strategy Basics</h2>
       <ul>
@@ -34,16 +65,37 @@ export function HowToPlay() {
           because no line can pass through it from the opposite side. Securing corners
           early gives you a permanent foothold on the board.
         </li>
+      </ul>
+      <img
+        src="/images/basic_strategy_othello_1.png"
+        alt="Corner stability — stable discs around h8"
+        className="howtoplay-img"
+      />
+      <ul>
         <li>
           <strong>Avoid the danger squares.</strong> The squares diagonal to each corner
           (a2, b1, g1, h2, etc.) give your opponent easy access to that corner. Playing
           into these squares is usually a mistake.
         </li>
+      </ul>
+      <img
+        src="/images/basic_strategy_othello_2.png"
+        alt="Danger zones marked near corners"
+        className="howtoplay-img"
+      />
+      <ul>
         <li>
           <strong>Mobility over disc count.</strong> Early in the game, having more discs
           is less important than having more available moves. Limit your opponent's
           options while keeping your own open.
         </li>
+      </ul>
+      <img
+        src="/images/basic_strategy_othello_3.png"
+        alt="Mobility advantage — fewer discs but more options"
+        className="howtoplay-img"
+      />
+      <ul>
         <li>
           <strong>Control the centre.</strong> The opening moves should focus on the
           central four-by-four region. Dominating the centre gives you flexibility and

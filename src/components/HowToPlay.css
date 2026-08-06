@@ -1,5 +1,5 @@
 .howtoplay-page {
-  max-width: 720px;
+  width: 50vw;
   margin: 0 auto;
   padding: var(--space-xxxl) var(--layout-gutter);
 }
@@ -59,4 +59,12 @@
 
 .howtoplay-page strong {
   color: var(--color-ink);
+}
+
+.howtoplay-img {
+  display: block;
+  width: 40%;
+  margin: var(--space-lg) auto;
+  border: 1px solid var(--color-hairline-medium);
+  image-rendering: auto;
 }
