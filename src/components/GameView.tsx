@@ -123,12 +123,24 @@ export function GameView({
       )}
 
       {!game.activeGame && game.status !== 2 && (
-        <GameLobby
-          onCreateGame={onCreateGame}
-          onAcceptGame={onAcceptGame}
-          disabled={txPending}
-          pendingGames={pendingGames}
-        />
+        <>
+          <div className="game-view__preview-board">
+            <span><b></b></span>
+            <Board
+              blackBits={game.blackBits}
+              whiteBits={game.whiteBits}
+              legalMoves={[]}
+              isMyTurn={false}
+              txPending={false}
+            />
+          </div>
+          <GameLobby
+            onCreateGame={onCreateGame}
+            onAcceptGame={onAcceptGame}
+            disabled={txPending}
+            pendingGames={pendingGames}
+          />
+        </>
       )}
     </div>
   )

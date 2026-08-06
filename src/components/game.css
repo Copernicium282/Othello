@@ -263,6 +263,25 @@
 }
 
 
+/* ─── Preview Board (no active game) ─── */
+
+.game-view__preview-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.game-view__preview-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate);
+}
+
+
 /* ─── Game Over ─── */
 
 .game-over {
