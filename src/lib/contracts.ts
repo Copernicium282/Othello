@@ -1,9 +1,3 @@
-import { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
-
-// --- Chain config ---
-const CHAIN_ID = 50312
-const RPC_URL = 'https://rpc.ankr.com/somnia_testnet'
-
 // --- Contract addresses ---
 export const ADDRESSES = {
   yyg: '0x615e6F1e9706A481B97373ff5c87FB0cf744dd15',

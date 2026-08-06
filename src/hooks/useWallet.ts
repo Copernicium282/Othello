@@ -70,7 +70,8 @@ export function useWallet() {
   useEffect(() => {
     if(!window.ethereum) return
 
-    const handleAccounts = (accounts: unknown[]) => {
+    const handleAccounts = (...args: unknown[]) => {
+      const accounts = args[0] as string[]
       if (accounts.length === 0) {
         setState({account: null, provider: null, signer: null, chainId: null, isConnecting: false, error: null})
       } else {
@@ -82,7 +83,7 @@ export function useWallet() {
       }
     }
 
-    const handleChain = () => {
+    const handleChain = (..._args: unknown[]) => {
       // Reload on chain change, simplest approach
       window.location.reload()
     }

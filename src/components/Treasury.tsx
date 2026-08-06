@@ -25,7 +25,7 @@ export function Treasury({
   firstPlace = { address: '0x1234567890abcdef1234567890abcdef12345678', percent: 50 },
   secondPlace = { address: '0xabcdef1234567890abcdef1234567890abcdef12', percent: 30 },
   thirdPlace = { address: '0x9876543210fedcba9876543210fedcba98765432', percent: 20 },
-  seasonEnded = false,
+  seasonEnded: _seasonEnded = false,
   onSettle,
 }: TreasuryProps) {
   return (

@@ -19,7 +19,7 @@ const linkSections: { title: string; links: FooterLink[] }[] = [
     title: 'Resources',
     links: [
       { label: 'How To Play', navTo: 'howtoplay' },
-      { label: 'Changelog', href: '#' },
+      { label: 'Changelog', href: 'https://github.com/Copernicium282/Othello/commit/c19fbc051c04b1a8fd41da5b0aac105bfedc6848' },
     ],
   },
   {
