@@ -1,0 +1,55 @@
+.team-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: var(--space-xxxl) var(--layout-gutter);
+}
+
+.team-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline-strong);
+  padding: var(--space-xxxl);
+  max-width: 400px;
+  width: 100%;
+}
+
+.team-avatar {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  border: 2px solid var(--color-hairline-strong);
+}
+
+.team-name {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.team-role {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-steel);
+  margin: 0;
+}
+
+.team-github {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-yin);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.team-github:hover {
+  color: var(--color-ink);
+}

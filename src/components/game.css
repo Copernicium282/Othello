@@ -1,0 +1,299 @@
+/* ===================================================================
+   Game Components
+   =================================================================== */
+
+/* ─── GameStatusBar ─── */
+
+.game-status-bar {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-hairline-strong);
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+}
+
+.game-status-bar__turn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.game-status-bar__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+}
+
+.game-status-bar__dot--yin {
+  background: #1a1a1a;
+  border: 1px solid #444;
+}
+
+.game-status-bar__dot--yang {
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+}
+
+.game-status-bar__counts {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-status-bar__count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-status-bar__count-num {
+  font-family: var(--font-heading);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+}
+
+.game-status-bar__count-num--yin {
+  color: var(--color-ink);
+}
+
+.game-status-bar__count-num--yang {
+  color: var(--color-ink-tint);
+}
+
+.game-status-bar__count-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate);
+}
+
+.game-status-bar__tx-badge {
+  font-family: var(--font-mono);
+  background: var(--color-surface-raised);
+  color: var(--color-yin);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: 0;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+
+/* ─── GameLobby ─── */
+
+.game-lobby {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.game-lobby__card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline-medium);
+  border-radius: 0;
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.game-lobby__card + .game-lobby__card {
+  border-top: none;
+}
+
+.game-lobby__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate);
+  margin-bottom: 4px;
+}
+
+.game-lobby__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-lobby__label {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-ink-tint);
+}
+
+.game-lobby__input {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline-medium);
+  border-radius: 0;
+  height: 40px;
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color var(--duration-fast) var(--ease-default);
+}
+
+.game-lobby__input:focus {
+  border-color: var(--color-yin);
+}
+
+.game-lobby__input::placeholder {
+  color: var(--color-steel);
+}
+
+.game-lobby__hint {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-slate);
+}
+
+.game-lobby__button {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border: none;
+  cursor: pointer;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 0;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: var(--space-sm);
+  transition: background-color var(--duration-fast) var(--ease-default);
+}
+
+.game-lobby__button--primary {
+  background: var(--color-yin);
+  color: var(--color-on-yin);
+}
+
+.game-lobby__button--primary:hover {
+  background: var(--color-yin-deep);
+}
+
+.game-lobby__button--primary:disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-steel);
+  cursor: not-allowed;
+}
+
+.game-lobby__button--yang {
+  background: var(--color-yang);
+  color: var(--color-on-yang);
+}
+
+.game-lobby__button--yang:hover {
+  background: var(--color-yang-deep);
+}
+
+.game-lobby__button--yang:disabled {
+  background: var(--color-surface-raised);
+  color: var(--color-steel);
+  cursor: not-allowed;
+}
+
+.game-lobby__divider {
+  height: 2px;
+  background: var(--color-hairline-strong);
+}
+
+
+/* ─── GameView ─── */
+
+.game-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: var(--space-xl) 16px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+}
+
+.game-view__info-row {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-hairline-medium);
+}
+
+.game-view__game-id {
+  font-family: var(--font-mono);
+  color: var(--color-ink-tint);
+}
+
+.game-view__opponent {
+  color: var(--color-ink-tint);
+}
+
+
+/* ─── Game Over ─── */
+
+.game-over {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-hairline-strong);
+  padding: var(--space-xxl);
+  text-align: center;
+  margin-top: var(--space-lg);
+}
+
+.game-over__title {
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  margin-bottom: var(--space-md);
+}
+
+.game-over__score {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 400;
+  color: var(--color-yin);
+  margin-bottom: var(--space-md);
+}
+
+.game-over__detail {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-slate);
+}

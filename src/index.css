@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ===================================================================
+   Othello.s — Design System Tokens
+   Mistral blocky structure × OpenCode dark tones
+   Fonts: Jersey 10 (pixel headings) + JetBrains Mono (body/labels)
+   =================================================================== */
+
+:root {
+  /* ─── Typography: Font Stacks ─── */
+  --font-heading: 'Jersey 10', 'Press Start 2P', cursive;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+
+  /* ─── Palette: Canvas & Surfaces ─── */
+  --color-canvas:            #0C0C0E;
+  --color-surface:           #151518;
+  --color-surface-raised:    #1C1C20;
+  --color-surface-elevated:  #242428;
+  --color-surface-overlay:   #2C2C32;
+
+  /* ─── Palette: Yin (amber / primary accent) ─── */
+  --color-yin:               #E8A020;
+  --color-yin-deep:          #C47D08;
+  --color-yin-muted:         #A06810;
+  --color-yin-subtle:        rgba(232, 160, 32, 0.10);
+  --color-yin-glow:          rgba(232, 160, 32, 0.30);
+  --color-on-yin:            #0C0C0E;
+
+  /* ─── Palette: Yang (teal / secondary accent) ─── */
+  --color-yang:              #2DD4A0;
+  --color-yang-deep:         #1A9E78;
+  --color-yang-muted:        #188060;
+  --color-yang-subtle:       rgba(45, 212, 160, 0.10);
+  --color-yang-glow:         rgba(45, 212, 160, 0.30);
+  --color-on-yang:           #0C0C0E;
+
+  /* ─── Palette: Ink (text hierarchy) ─── */
+  --color-ink:               #F0ECE8;
+  --color-ink-tint:          #D0CCC6;
+  --color-charcoal:          #B0ACA6;
+  --color-slate:             #908C88;
+  --color-steel:             #706C68;
+  --color-stone:             #504C48;
+  --color-muted:             #3A3632;
+
+  /* ─── Palette: Borders — VISIBLE, not invisible ─── */
+  --color-hairline:          rgba(240, 237, 232, 0.12);
+  --color-hairline-soft:     rgba(240, 237, 232, 0.08);
+  --color-hairline-medium:   rgba(240, 237, 232, 0.18);
+  --color-hairline-strong:   rgba(240, 237, 232, 0.28);
+  --color-hairline-intense:  rgba(240, 237, 232, 0.40);
+  --color-divide:            rgba(240, 237, 232, 0.12);
+
+  /* ─── Palette: Semantic ─── */
+  --color-success:           #2DD4A0;
+  --color-warning:           #E8A020;
+  --color-danger:            #E84040;
+  --color-info:              #5B9FE8;
+
+  /* ─── Spacing Scale ─── */
+  --space-xxs:     4px;
+  --space-xs:      8px;
+  --space-sm:      12px;
+  --space-md:      16px;
+  --space-lg:      24px;
+  --space-xl:      32px;
+  --space-xxl:     40px;
+  --space-xxxl:    56px;
+  --space-section-sm:  64px;
+  --space-section:     80px;
+  --space-section-lg:  120px;
+  --space-hero:        160px;
+
+  /* ─── Layout ─── */
+  --layout-max-width:  1280px;
+  --layout-gutter:     40px;
+  --nav-height:        56px;
+  --banner-height:     40px;
+
+  /* ─── Transitions ─── */
+  --ease-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 350ms;
+}
+
+
+/* ===================================================================
+   Global Reset
+   =================================================================== */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-ink);
+  background-color: var(--color-canvas);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+
+/* ===================================================================
+   Typography Scale
+   Jersey 10 — pixel-art headings, chunky & blocky
+   JetBrains Mono — body/labels, terminal aesthetic
+   =================================================================== */
+
+/* ─── Display: hero-level, huge pixel text ─── */
+.display-lg {
+  font-family: var(--font-heading);
+  font-size: 72px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: 0.02em;
+}
+
+.display-md {
+  font-family: var(--font-heading);
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+
+/* ─── Headings: section-level ─── */
+.heading-lg {
+  font-family: var(--font-heading);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.heading-md {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.heading-sm {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+/* ─── Body: readable monospace ─── */
+.body-lg {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.body-md {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.body-sm {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Labels: uppercase mono ─── */
+.label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.label-lg {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+
+/* ===================================================================
+   Utility Classes
+   =================================================================== */
+
+.text-yin       { color: var(--color-yin); }
+.text-yang      { color: var(--color-yang); }
+.text-ink       { color: var(--color-ink); }
+.text-ink-tint  { color: var(--color-ink-tint); }
+.text-slate     { color: var(--color-slate); }
+.text-muted     { color: var(--color-muted); }
+
+
+/* ===================================================================
+   Scrollbar — Thin dark treatment
+   =================================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-stone);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-steel);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone) var(--color-canvas);
+}
+
+
+/* ===================================================================
+   Selection
+   =================================================================== */
+
+::selection {
+  background: var(--color-yin-glow);
+  color: var(--color-ink);
+}

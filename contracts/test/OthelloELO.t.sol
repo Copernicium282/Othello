@@ -86,4 +86,38 @@ contract OthelloELOTest is Test {
         vm.expectRevert();
         ELO.recordResult(winner, loser);
     }
+
+    function testVerifyTopThreeCorrect() public {
+        address[3] memory top3 = [address(0x1), address(0x2), address(0x3)];
+        ELO._setEloForTest(ELO.currSeason(), top3[0], 1500e18);
+        ELO._setEloForTest(ELO.currSeason(), top3[1], 1300e18);
+        ELO._setEloForTest(ELO.currSeason(), top3[2], 1100e18);
+        ELO.verifyTopThree(top3); // should not revert
+    }
+
+    function testVerifyTopThreeIncorrectOrder() public {
+        address[3] memory top3 = [address(0x1), address(0x2), address(0x3)];
+        ELO._setEloForTest(ELO.currSeason(), top3[0], 1100e18);
+        ELO._setEloForTest(ELO.currSeason(), top3[1], 1300e18);
+        ELO._setEloForTest(ELO.currSeason(), top3[2], 1500e18);
+        vm.expectRevert(OthelloELO.InvalidTopThree.selector);
+        ELO.verifyTopThree(top3);
+    }
+
+    function testVerifyTopThreeDuplicate() public {
+        address[3] memory top3 = [address(0x1), address(0x1), address(0x3)];
+        ELO._setEloForTest(ELO.currSeason(), top3[0], 1500e18);
+        ELO._setEloForTest(ELO.currSeason(), top3[2], 1100e18);
+        vm.expectRevert(OthelloELO.InvalidTopThree.selector);
+        ELO.verifyTopThree(top3);
+    }
+
+    function testVerifyTopThreeZeroElo() public {
+        address[3] memory top3 = [address(0x1), address(0x2), address(0x3)];
+        ELO._setEloForTest(ELO.currSeason(), top3[0], 1500e18);
+        ELO._setEloForTest(ELO.currSeason(), top3[1], 0);
+        ELO._setEloForTest(ELO.currSeason(), top3[2], 1100e18);
+        vm.expectRevert(OthelloELO.InvalidTopThree.selector);
+        ELO.verifyTopThree(top3);
+    }
 }

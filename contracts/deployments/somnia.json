@@ -3,10 +3,10 @@
   "network": "Somnia Shannon Testnet",
   "deployer": "0x7F99f10684e4F70051f3de5Ceb9fDC71a38aF0Fd",
   "contracts": {
-    "YinYang": "0x602E38982c6115C533b3762e24EDd8740458F1b0",
-    "OthelloELO": "0xD14564264F47a0756713467Bc7C36CF174566Db1",
-    "OthelloTreasury": "0xEF60391672aBc91DB1c9E21a1E23FBA33153dF76",
-    "OthelloGame": "0xAbC9F69426F2eCDC0cC5149F71fE6b76af007028"
+    "YinYang": "0x615e6F1e9706A481B97373ff5c87FB0cf744dd15",
+    "OthelloELO": "0x39125d25B352F064B943Ea9DA9C229bA0D3a69c1",
+    "OthelloTreasury": "0x1Ddf8F5A66DcBEfFF4983C70b7eB9A82709Ef9F1",
+    "OthelloGame": "0x2D0266830e6610e3dC7c00A3f8Bd7942936B130e"
   },
   "rpc": "https://rpc.ankr.com/somnia_testnet",
   "compiler": "0.8.35",

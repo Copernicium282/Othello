@@ -1,0 +1,62 @@
+.howtoplay-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-xxxl) var(--layout-gutter);
+}
+
+.howtoplay-page h2 {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--color-ink);
+  margin-top: var(--space-xxxl);
+  margin-bottom: var(--space-lg);
+}
+
+.howtoplay-page h2:first-child {
+  margin-top: 0;
+}
+
+.howtoplay-page h3 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--color-ink);
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-md);
+}
+
+.howtoplay-page p {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-steel);
+  margin-bottom: var(--space-md);
+}
+
+.howtoplay-page ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: var(--space-md);
+}
+
+.howtoplay-page li {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-steel);
+  padding-left: var(--space-lg);
+  position: relative;
+  margin-bottom: var(--space-sm);
+}
+
+.howtoplay-page li::before {
+  content: '\2014';
+  position: absolute;
+  left: 0;
+  color: var(--color-slate);
+}
+
+.howtoplay-page strong {
+  color: var(--color-ink);
+}

@@ -1,0 +1,69 @@
+/* ===================================================================
+   Site Footer — Grid columns with divide-x dividers
+   =================================================================== */
+
+.site-footer {
+  background-color: var(--color-canvas);
+  border-top: 1px solid var(--color-hairline-strong);
+}
+
+.footer-inner {
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: var(--space-xxxl) var(--layout-gutter);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-bottom: var(--space-xxxl);
+  border-left: 1px solid var(--color-hairline-medium);
+}
+
+.footer-grid > * {
+  padding: 0 var(--space-xl);
+  border-right: 1px solid var(--color-hairline-medium);
+}
+
+.footer-col-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-tint);
+  margin-bottom: var(--space-md);
+}
+
+.footer-col-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.footer-link {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--color-steel);
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.footer-link:hover {
+  color: var(--color-ink);
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-hairline-strong);
+}
+
+.footer-chain-info {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}

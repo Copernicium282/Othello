@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract OthelloELO is Ownable {
     error UnauthorizedCaller();
     error EloDiffTooLarge();
+    error InvalidTopThree();
 
     mapping(uint256 currSeason => mapping(address player => uint256 eloPlayer)) public elo;
     uint256 public currSeason;
@@ -73,5 +74,22 @@ contract OthelloELO is Ownable {
         elo[currSeason][loser] -= change;
 
         emit ELOUpdated(winner, elo[currSeason][winner], loser, elo[currSeason][loser]);
+    }
+
+    /// @notice Verify that 3 addresses form a valid top-3 leaderboard.
+    /// @dev Checks: distinct addresses, all have ELO > 0, sorted descending by ELO.
+    function verifyTopThree(address[3] calldata candidates) external view {
+        if(
+            candidates[0] == candidates[1] ||
+            candidates[1] == candidates[2] ||
+            candidates[0] == candidates[2]
+        ) revert InvalidTopThree();
+
+        uint256 elo0 = elo[currSeason][candidates[0]];
+        uint256 elo1 = elo[currSeason][candidates[1]];
+        uint256 elo2 = elo[currSeason][candidates[2]];
+
+        if(elo0 == 0 || elo1 == 0 || elo2 == 0) revert InvalidTopThree();
+        if(elo0 < elo1 || elo1 < elo2) revert InvalidTopThree();
     }
 }

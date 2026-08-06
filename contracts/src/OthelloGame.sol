@@ -17,6 +17,8 @@ contract OthelloGame is Ownable {
     error ReentrancyGuard();
     error FailedSendEth();
 
+    event GameCreated(uint256 indexed gameId, address indexed challenger, uint256 stake);
+
     struct Player{
         address playerAddr;
         uint64 dailyCount;
@@ -158,7 +160,16 @@ contract OthelloGame is Ownable {
         game.p2 = Opponent;
         game.p1.playerAddr = msg.sender;
         game.p2.playerAddr = opponent;
+        emit GameCreated(nextGameId, msg.sender, Challenger.stake);
         unchecked { nextGameId++; }
+    }
+
+    function cancelGame(uint256 gameId) public {
+        if(games[gameId].status != Status.PENDING) revert GameStatusInvalid();
+        if(msg.sender != games[gameId].p1.playerAddr) revert WrongOpponent();
+
+        games[gameId].status = Status.FINISHED;
+        if(!YYG_TOKEN.transfer(msg.sender, games[gameId].p1.stake)) revert StakeTransferFailed();
     }
 
     modifier onlyOpponent(uint256 gameId) {

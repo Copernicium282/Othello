@@ -1,0 +1,394 @@
+/* ===================================================================
+   Shared Page Styles
+   =================================================================== */
+
+/* ─── Stat Cells (divide-x) ─── */
+.stat-row {
+  display: flex;
+  gap: 0;
+  border-left: 1px solid var(--color-hairline-medium);
+}
+
+.stat-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-section-sm) var(--space-xl);
+  border-right: 1px solid var(--color-hairline-medium);
+}
+
+.stat-number {
+  font-family: var(--font-heading);
+  font-size: 64px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}
+
+/* ─── Micro-Uppercase Eyebrow ─── */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+  margin-bottom: var(--space-sm);
+}
+
+/* ─── Card Feature ─── */
+.card-feature {
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-hairline-strong);
+  border-radius: 0;
+  padding: var(--space-xxl);
+}
+
+
+/* ===================================================================
+   Leaderboard
+   =================================================================== */
+
+.leaderboard {
+  width: 100%;
+}
+
+.leaderboard-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px 140px;
+  padding: var(--space-sm) 0;
+  border-bottom: 2px solid var(--color-hairline-strong);
+}
+
+.leaderboard-header span {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px 140px;
+  align-items: center;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-hairline-medium);
+  transition: background-color var(--duration-fast) var(--ease-default);
+}
+
+.leaderboard-row:hover {
+  background: var(--color-surface);
+}
+
+.leaderboard-rank {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--color-yin);
+}
+
+.leaderboard-address {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+.leaderboard-elo {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-yin);
+}
+
+.leaderboard-record {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-ink-tint);
+}
+
+.leaderboard-empty {
+  padding: var(--space-section) 0;
+  text-align: center;
+  color: var(--color-slate);
+  font-size: 16px;
+}
+
+
+/* ===================================================================
+   Wrap / Unwrap
+   =================================================================== */
+
+.wrap-unwrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wrap-unwrap-card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.wrap-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.wrap-divider {
+  width: 100%;
+  height: 2px;
+  background-color: var(--color-hairline-strong);
+  margin: var(--space-xl) 0;
+}
+
+.unwrap-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.amount-input {
+  flex: 1;
+  height: 40px;
+  padding: 0 var(--space-sm);
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline-medium);
+  border-radius: 0;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-default);
+}
+
+.amount-input:focus {
+  border-color: var(--color-yin);
+}
+
+.amount-input::placeholder {
+  color: var(--color-steel);
+}
+
+.output-display {
+  flex: 1;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline-medium);
+  border-radius: 0;
+  color: var(--color-yin);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.output-display--yang {
+  color: var(--color-yang);
+}
+
+.ratio-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-slate);
+  margin-top: var(--space-xxs);
+}
+
+.balance-label {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-ink);
+  margin-bottom: var(--space-lg);
+}
+
+.button-link {
+  background: none;
+  border: none;
+  color: var(--color-yin);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-top: var(--space-xs);
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+.button-link:hover {
+  color: var(--color-yin-deep);
+}
+
+/* Yang button variant — solid jade */
+.button-yang {
+  background: var(--color-yang) !important;
+  color: var(--color-on-yang) !important;
+}
+
+.button-yang:hover {
+  background: var(--color-yang-deep) !important;
+}
+
+/* Unwrap All — secondary style, full width */
+.button-unwrap-all {
+  font-size: 14px !important;
+  padding: 10px 20px !important;
+  width: 100%;
+  margin-top: var(--space-xs);
+}
+
+
+/* ===================================================================
+   Treasury
+   =================================================================== */
+
+.treasury {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.treasury-balance {
+  font-family: var(--font-heading);
+  font-size: 72px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  margin-bottom: var(--space-xs);
+}
+
+.treasury-token {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  color: var(--color-slate);
+  margin-bottom: var(--space-section);
+}
+
+.treasury-card {
+  width: 100%;
+  max-width: 640px;
+}
+
+.season-countdown {
+  font-family: var(--font-heading);
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  margin-bottom: var(--space-xs);
+}
+
+.season-label {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  color: var(--color-slate);
+  margin-bottom: var(--space-xxl);
+}
+
+.payout-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 2px;
+  background: var(--color-hairline-strong);
+  border: 2px solid var(--color-hairline-strong);
+  margin-bottom: var(--space-xxl);
+}
+
+.payout-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xl) var(--space-md);
+  background: var(--color-surface);
+}
+
+.payout-slot--first {
+  background-color: var(--color-surface-raised);
+  border-left: 3px solid var(--color-yin);
+}
+
+.payout-slot--second {
+  background-color: var(--color-surface);
+  border-left: 3px solid var(--color-yang);
+}
+
+.payout-slot--third {
+  background-color: var(--color-surface);
+}
+
+.payout-rank {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--color-yin);
+}
+
+.payout-address {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-ink-tint);
+}
+
+.payout-percent {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-ink);
+}
+
+.payout-percent-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}
+
+.settle-btn {
+  width: 100%;
+  margin-bottom: var(--space-md);
+}
+
+.settle-note {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-slate);
+  text-align: center;
+}

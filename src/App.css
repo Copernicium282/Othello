@@ -1,0 +1,135 @@
+/* ===================================================================
+   App Shell
+   =================================================================== */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-canvas);
+}
+
+
+/* ===================================================================
+   Section Dividers — VISIBLE engineering-schematic hairlines
+   =================================================================== */
+
+.section-divider {
+  height: 1px;
+  background: var(--color-hairline-strong);
+  border: none;
+  margin: 0;
+}
+
+
+/* ===================================================================
+   Page Content
+   =================================================================== */
+
+.page-content {
+  max-width: var(--layout-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-section) var(--layout-gutter);
+  flex: 1;
+  min-height: calc(100vh - var(--nav-height) - var(--banner-height) - 20px);
+}
+
+.page-content h2 {
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--color-ink);
+  margin-bottom: var(--space-lg);
+}
+
+.page-content p {
+  color: var(--color-ink-tint);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+
+/* ===================================================================
+   Buttons — Blocky, no border-radius (Mistral-style)
+   =================================================================== */
+
+/* Primary — solid amber accent */
+.button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 10px 20px;
+  background-color: var(--color-yin);
+  color: var(--color-on-yin);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border-radius: 0;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-default);
+}
+
+.button-primary:hover {
+  background-color: var(--color-yin-deep);
+}
+
+.button-primary:active {
+  background-color: var(--color-yin-muted);
+}
+
+/* Secondary — bordered ghost */
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border-radius: 0;
+  border: 1px solid var(--color-hairline-strong);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.button-secondary:hover {
+  border-color: var(--color-ink-tint);
+  color: var(--color-ink);
+}
+
+/* Ghost — subtle */
+.button-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border-radius: 0;
+  border: 1px solid var(--color-hairline-medium);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.button-ghost:hover {
+  border-color: var(--color-hairline-strong);
+  color: var(--color-ink-tint);
+}
