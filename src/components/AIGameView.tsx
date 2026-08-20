@@ -1,6 +1,6 @@
-import { useAIGame } from '../hooks/useAIGame'
 import { Board } from './Board'
 import type { Difficulty } from '../lib/ai'
+import type { AIGameState } from '../hooks/useAIGame'
 import './AIGameView.css'
 
 const DIFFICULTIES: { id: Difficulty; label: string; desc: string }[] = [
@@ -11,13 +11,18 @@ const DIFFICULTIES: { id: Difficulty; label: string; desc: string }[] = [
 ]
 
 export function AIGameView({
+  state,
+  onStartGame,
+  onPlayerMove,
   showFlipCounts = false,
   onToggleFlipCounts,
 }: {
+  state: AIGameState
+  onStartGame: (difficulty: Difficulty) => void
+  onPlayerMove: (position: number) => void
   showFlipCounts?: boolean
   onToggleFlipCounts?: () => void
 }) {
-  const { state, startGame, playerMove } = useAIGame()
 
   return (
     <div className="ai-game-view">
@@ -30,7 +35,7 @@ export function AIGameView({
               <button
                 key={d.id}
                 className="ai-game-view__diff-btn"
-                onClick={() => startGame(d.id)}
+                onClick={() => onStartGame(d.id)}
               >
                 <span className="ai-game-view__diff-label">{d.label}</span>
                 <span className="ai-game-view__diff-desc">{d.desc}</span>
@@ -63,7 +68,7 @@ export function AIGameView({
             blackBits={state.blackBits}
             whiteBits={state.whiteBits}
             legalMoves={state.legalMoves}
-            onCellClick={state.gameStatus === 'playing' ? playerMove : undefined}
+            onCellClick={state.gameStatus === 'playing' ? onPlayerMove : undefined}
             isMyTurn={state.gameStatus === 'playing'}
             txPending={state.gameStatus === 'thinking'}
             blackToMove={state.playerIsBlack ? state.gameStatus === 'playing' : state.gameStatus !== 'playing'}
@@ -94,7 +99,7 @@ export function AIGameView({
               </div>
             </div>
           )}
-          <button className="ai-game-view__new-game-btn" onClick={() => startGame(state.difficulty)}>
+          <button className="ai-game-view__new-game-btn" onClick={() => onStartGame(state.difficulty)}>
             {state.gameStatus === 'gameover' ? 'Play Again' : 'Restart'}
           </button>
         </div>

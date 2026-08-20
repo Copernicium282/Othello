@@ -10,6 +10,7 @@ export interface NavProps {
 }
 
 const tabs: { id: Tab; label: string }[] = [
+  { id: 'howtoplay', label: 'How to Play' },
   { id: 'play', label: 'Play' },
   { id: 'ai', label: 'AI' },
   { id: 'leaderboard', label: 'Leaderboard' },

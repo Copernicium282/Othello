@@ -68,3 +68,76 @@
   border: 1px solid var(--color-hairline-medium);
   image-rendering: auto;
 }
+
+.howtoplay-steps {
+  list-style: none;
+  counter-reset: howto;
+  margin: 0 0 var(--space-lg);
+  padding: 0;
+}
+
+.howtoplay-quick {
+  border: 1px solid var(--color-yin-glow);
+  background: var(--color-yin-subtle);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.howtoplay-quick p {
+  margin-bottom: var(--space-lg);
+}
+
+.howtoplay-quick .button-primary {
+  padding: 14px 28px;
+  font-size: 15px;
+}
+
+.howtoplay-steps .howtoplay-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  padding-left: var(--space-lg);
+  background: var(--color-yin-subtle);
+  border-left: 3px solid var(--color-yin);
+}
+
+.howtoplay-steps .howtoplay-step::before {
+  content: counter(howto);
+  counter-increment: howto;
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--color-yin);
+  color: var(--color-on-yin);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.howtoplay-step__body {
+  flex: 1;
+  min-width: 240px;
+  color: var(--color-charcoal);
+}
+
+.howtoplay-step__body strong {
+  color: var(--color-yin);
+}
+
+.howtoplay-step__body code {
+  color: var(--color-yin);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.howtoplay-step__actions {
+  display: inline-flex;
+  gap: var(--space-xs);
+}

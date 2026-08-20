@@ -1,8 +1,161 @@
+import type { Tab } from '../App'
 import './HowToPlay.css'
 
-export function HowToPlay() {
+export function HowToPlay({
+  onNavigate,
+  onConnect,
+}: {
+  onNavigate: (tab: Tab) => void
+  onConnect: () => void
+}) {
   return (
     <div className="howtoplay-page">
+      <section className="howtoplay-quick">
+        <h2>Quick Play</h2>
+        <p>
+          No wallet, no stakes, no waiting. Jump straight into a game against the AI to
+          test the mechanics, or play a quick round while your friends are busy.
+        </p>
+        <button className="button-primary" onClick={() => onNavigate('ai')}>
+          Play vs AI
+        </button>
+      </section>
+
+      <h2>Getting Started</h2>
+      <p>
+        Othello.s runs on the Somnia Shannon testnet, so everything you need is free.
+        The setup takes about five minutes.
+      </p>
+      <ol className="howtoplay-steps">
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Install a wallet.</strong>{' '}
+            <span>
+              Install the MetaMask browser extension and create an account.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <a
+              className="button-secondary"
+              href="https://metamask.io/download/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              metamask.io/download
+            </a>
+          </div>
+        </li>
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Connect your wallet.</strong>{' '}
+            <span>
+              Click Connect Wallet in the top-left navigation. MetaMask prompts you to
+              add the Somnia Shannon network (RPC{' '}
+              <code>api.infra.testnet.somnia.network</code>, Chain ID <code>50312</code>
+              ). Approve it and you're connected. No manual network setup needed.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <button className="button-primary" onClick={onConnect}>
+              Connect Wallet
+            </button>
+          </div>
+        </li>
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Get free testnet STT.</strong>{' '}
+            <span>
+              STT pays for transaction fees. Request it for your address from the
+              Somnia Shannon faucet.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <a
+              className="button-secondary"
+              href="https://cloud.google.com/application/web3/faucet/somnia/shannon"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open the faucet
+            </a>
+          </div>
+        </li>
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Wrap STT into YYG.</strong>{' '}
+            <span>
+              YYG is the token you stake on games, wrapped at the fixed rate of
+              1 STT = 100,000 YYG.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <button className="button-primary" onClick={() => onNavigate('wrap')}>
+              Open Wrap/Unwrap
+            </button>
+          </div>
+        </li>
+      </ol>
+
+      <h2>Play Your First Match</h2>
+      <ol className="howtoplay-steps">
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Create a game.</strong>{' '}
+            <span>
+              Pick an opponent (any wallet address) and a stake in YYG. Your wallet
+              approves the stake and pays it in a single batched transaction, and a
+              session key is created automatically so your moves are cheap and instant.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <button className="button-primary" onClick={() => onNavigate('play')}>
+              Open Play
+            </button>
+          </div>
+        </li>
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Accept a game.</strong>{' '}
+            <span>
+              A pending challenge appears in the Play tab. Accepting matches the stake,
+              locks both deposits, and starts the game with the challenger moving first.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <button className="button-secondary" onClick={() => onNavigate('play')}>
+              See pending games
+            </button>
+          </div>
+        </li>
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Make moves.</strong>{' '}
+            <span>
+              Click an empty square to place a disc. Moves go through your session key
+              and settle in about a second. The status chip shows whether your session
+              is active; if it expires, one click renews it.
+            </span>
+          </div>
+        </li>
+        <li className="howtoplay-step">
+          <div className="howtoplay-step__body">
+            <strong>Win and collect.</strong>{' '}
+            <span>
+              The winner automatically receives 96% of the combined pot. The remaining
+              4% funds the seasonal treasury, and both players' ELO ratings are updated.
+            </span>
+          </div>
+          <div className="howtoplay-step__actions">
+            <button
+              className="button-secondary"
+              onClick={() => onNavigate('leaderboard')}
+            >
+              View Leaderboard
+            </button>
+          </div>
+        </li>
+      </ol>
+
       <h2>What is Othello?</h2>
       <p>
         Othello is a strategy board game played between two opponents on an 8x8 grid.

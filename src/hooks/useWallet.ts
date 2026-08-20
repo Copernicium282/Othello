@@ -30,6 +30,34 @@ export function useWallet() {
     error: null,
   })
 
+  const ensureSomniaNetwork = useCallback(async (ethereum: Exclude<Window['ethereum'], undefined>) => {
+    // SAFETY: EIP-3326: wallet_switchEthereumChain rejects with code 4902
+    // when the chain is not in the wallet yet, then we add it explicitly.
+    const chainId = '0xc488'
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId }],
+      })
+    } catch (err) {
+      // SAFETY: EIP-3326 switch errors are JSON-RPC errors with a numeric code;
+      // 4902 means the chain is not yet added to the wallet.
+      const code = (err as { code?: number }).code
+      if (code !== 4902) throw err
+      await ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId,
+            chainName: 'Somnia Shannon',
+            nativeCurrency: { name: 'Somnia', symbol: 'STT', decimals: 18 },
+            rpcUrls: ['https://api.infra.testnet.somnia.network'],
+          },
+        ],
+      })
+    }
+  }, [])
+
   const connect = useCallback(async () => {
     if (!window.ethereum) {
       setState(s => ({ ...s, error: 'Metamask not installed' }))
@@ -45,6 +73,8 @@ export function useWallet() {
       const accounts = await window.ethereum.request<string[]>({
         method: 'eth_requestAccounts',
       })
+
+      await ensureSomniaNetwork(window.ethereum)
 
       const provider = new BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
@@ -78,7 +108,7 @@ export function useWallet() {
         error: err instanceof Error ? err.message : 'Connection failed',
       }))
     }
-  }, [])
+  }, [ensureSomniaNetwork])
 
   // Listen for account/chain changes
   useEffect(() => {

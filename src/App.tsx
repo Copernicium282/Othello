@@ -4,6 +4,9 @@ import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
 import { useWallet } from './hooks/useWallet'
 import { useContracts } from './hooks/useContracts'
 import { useGame } from './hooks/useGame'
+import { useAIGame } from './hooks/useAIGame'
+import type { AIGameState } from './hooks/useAIGame'
+import type { Difficulty } from './lib/ai'
 import { useSession } from './hooks/useSession'
 import type { SessionResult } from './hooks/useSession'
 import { client, somniaShannon } from './lib/thirdweb'
@@ -72,6 +75,11 @@ function PageContent({
   onToggleFlipCounts,
   onRenewSession,
   onRevokeSession,
+  onNavigate,
+  onConnect,
+  aiGameState,
+  onAIStart,
+  onAIPlayerMove,
 }: {
   activeTab: Tab
   contracts: ReturnType<typeof useContracts>
@@ -95,6 +103,11 @@ function PageContent({
   onToggleFlipCounts: () => void
   onRenewSession: (gameId: string) => Promise<SessionResult>
   onRevokeSession: () => Promise<SessionResult>
+  onNavigate: (tab: Tab) => void
+  onConnect: () => void
+  aiGameState: AIGameState
+  onAIStart: (difficulty: Difficulty) => void
+  onAIPlayerMove: (position: number) => void
 }) {
   const game = useGame(gameId, contracts, account)
 
@@ -233,6 +246,9 @@ function PageContent({
     case 'ai':
       return (
         <AIGameView
+          state={aiGameState}
+          onStartGame={onAIStart}
+          onPlayerMove={onAIPlayerMove}
           showFlipCounts={showFlipCounts}
           onToggleFlipCounts={onToggleFlipCounts}
         />
@@ -297,12 +313,12 @@ function PageContent({
     case 'team':
       return <Team />
     case 'howtoplay':
-      return <HowToPlay />
+      return <HowToPlay onNavigate={onNavigate} onConnect={onConnect} />
   }
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('play')
+  const [activeTab, setActiveTab] = useState<Tab>('howtoplay')
   const wallet = useWallet()
   const contracts = useContracts(wallet.provider, wallet.signer)
   const [yygBalance, setYygBalance] = useState('0')
@@ -314,6 +330,7 @@ export function App() {
   const [seasonDeadline, setSeasonDeadline] = useState(0)
   const [pendingGames, setPendingGames] = useState<Array<{ gameId: string; challenger: string; stake: string }>>([])
   const [showFlipCounts, setShowFlipCounts] = useState(() => localStorage.getItem('othello.flipBadges') === '1')
+  const aiGame = useAIGame()
   const session = useSession({
     client,
     chain: somniaShannon,
@@ -495,6 +512,11 @@ export function App() {
             session.renewSession({ gameId: id, durationBlocks: 5000 })
           }
           onRevokeSession={async () => session.revokeSession()}
+          onNavigate={setActiveTab}
+          onConnect={wallet.connect}
+          aiGameState={aiGame.state}
+          onAIStart={aiGame.startGame}
+          onAIPlayerMove={aiGame.playerMove}
         />
       </main>
       <YinYangStripe />
