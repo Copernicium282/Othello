@@ -11,6 +11,7 @@ export interface NavProps {
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'play', label: 'Play' },
+  { id: 'ai', label: 'AI' },
   { id: 'leaderboard', label: 'Leaderboard' },
   { id: 'treasury', label: 'Treasury' },
   { id: 'wrap', label: 'Wrap/Unwrap' },

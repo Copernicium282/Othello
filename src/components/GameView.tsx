@@ -22,6 +22,9 @@ function shorten(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
+const DEFAULT_BLACK = 0x0000000810000000n
+const DEFAULT_WHITE = 0x0000001008000000n
+
 export function GameView({
   game,
   contracts,
@@ -39,6 +42,11 @@ export function GameView({
       : game.p1Addr
     : ''
 
+  // A PENDING game that hasn't been accepted yet has empty bitboards; show the
+  // standard opening position instead of a blank grid.
+  const previewBlack = game.blackBits === 0n && game.whiteBits === 0n ? DEFAULT_BLACK : game.blackBits
+  const previewWhite = game.blackBits === 0n && game.whiteBits === 0n ? DEFAULT_WHITE : game.whiteBits
+
   const handleCellClick = async (position: number) => {
     if (!contracts || !gameId || !account) return
     onMovePending(true)
@@ -46,7 +54,7 @@ export function GameView({
       const tx = await contracts.game.makeMove(gameId, position)
       await tx.wait()
     } catch {
-      toast('error', 'Move failed — invalid or not your turn')
+      toast('error', 'Move failed: invalid or not your turn')
     } finally {
       onMovePending(false)
     }
@@ -85,17 +93,23 @@ export function GameView({
       {game.status === 2 && (
         <div className="game-over">
           <div className="game-over__title">
-            {game.blackCount > game.whiteCount ? 'Black' : 'White'} Wins
+            {game.blackCount > game.whiteCount
+              ? 'Black Wins'
+              : game.whiteCount > game.blackCount
+                ? 'White Wins'
+                : 'Draw'}
           </div>
           <div className="game-over__score">
             {game.blackCount} - {game.whiteCount}
           </div>
           <div className="game-over__detail">
-            {account &&
-              ((account.toLowerCase() === game.p1Addr.toLowerCase() && game.blackCount > game.whiteCount) ||
-                (account.toLowerCase() === game.p2Addr.toLowerCase() && game.whiteCount > game.blackCount))
-              ? 'You won! YYG has been sent to your wallet.'
-              : 'You lost. Better luck next time.'}
+            {game.blackCount === game.whiteCount
+              ? "It's a draw: both players got their stakes back (96% each)."
+              : account &&
+                  ((account.toLowerCase() === game.p1Addr.toLowerCase() && game.blackCount > game.whiteCount) ||
+                    (account.toLowerCase() === game.p2Addr.toLowerCase() && game.whiteCount > game.blackCount))
+                ? 'You won! YYG has been sent to your wallet.'
+                : 'You lost. Better luck next time.'}
           </div>
         </div>
       )}
@@ -127,8 +141,8 @@ export function GameView({
           <div className="game-view__preview-board">
             <span><b></b></span>
             <Board
-              blackBits={game.blackBits}
-              whiteBits={game.whiteBits}
+              blackBits={previewBlack}
+              whiteBits={previewWhite}
               legalMoves={[]}
               isMyTurn={false}
               txPending={false}

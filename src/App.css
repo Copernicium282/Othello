@@ -11,7 +11,7 @@
 
 
 /* ===================================================================
-   Section Dividers — VISIBLE engineering-schematic hairlines
+   Section Dividers : VISIBLE engineering-schematic hairlines
    =================================================================== */
 
 .section-divider {
@@ -51,10 +51,10 @@
 
 
 /* ===================================================================
-   Buttons — Blocky, no border-radius (Mistral-style)
+   Buttons : Blocky, no border-radius (Mistral-style)
    =================================================================== */
 
-/* Primary — solid amber accent */
+/* Primary : solid amber accent */
 .button-primary {
   display: inline-flex;
   align-items: center;
@@ -82,7 +82,7 @@
   background-color: var(--color-yin-muted);
 }
 
-/* Secondary — bordered ghost */
+/* Secondary : bordered ghost */
 .button-secondary {
   display: inline-flex;
   align-items: center;
@@ -108,7 +108,7 @@
   color: var(--color-ink);
 }
 
-/* Ghost — subtle */
+/* Ghost : subtle */
 .button-ghost {
   display: inline-flex;
   align-items: center;

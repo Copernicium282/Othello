@@ -31,3 +31,6 @@ contracts/broadcast/
 *.njsproj
 *.sln
 *.sw?
+
+# Vendored oxlint plugin
+tools/oxlint/anti-slop

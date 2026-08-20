@@ -33,6 +33,14 @@ contract OthelloTreasuryTest is Test {
         bool check = yyg.transfer(address(treasury), 1000e18);
         require(check, "Setup YYG transfer failed");
         vm.stopPrank();
+
+        // Season-0 leaderboard so settleSeason's verifyTopThree passes
+        // (alice > bob > carol, descending).
+        vm.startPrank(owner);
+        elo._setEloForTest(0, alice, 1500e18);
+        elo._setEloForTest(0, bob, 1300e18);
+        elo._setEloForTest(0, carol, 1100e18);
+        vm.stopPrank();
     }
 
     // receive4Percent
@@ -141,5 +149,12 @@ contract OthelloTreasuryTest is Test {
         address[3] memory top3 = [alice, bob, carol];
         vm.expectRevert(OthelloTreasury.NoTreasuryBalance.selector);
         emptyTreasury.settleSeason(top3);
+    }
+
+    function testSettleSeason_RejectsNonTopThree() public {
+        vm.warp(block.timestamp + 30 days);
+        address[3] memory top3 = [makeAddr("fake1"), makeAddr("fake2"), makeAddr("fake3")];
+        vm.expectRevert(OthelloELO.InvalidTopThree.selector);
+        treasury.settleSeason(top3);
     }
 }

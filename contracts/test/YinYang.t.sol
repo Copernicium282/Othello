@@ -7,55 +7,69 @@ import "../src/YinYang.sol";
 contract YinYangTest is Test {
     YinYang public yyg;
 
-	function setUp() public {
-		yyg = new YinYang();
-	}
+    function setUp() public {
+        yyg = new YinYang();
+    }
 
-	function testWrap(uint256 bal) public {
-		address alice = makeAddr("aiSlopIsBadForHealth");
+    function testWrap(uint256 bal) public {
+        address alice = makeAddr("aiSlopIsBadForHealth");
 
-		// Foundry fuzzer can gen upto 10^77, so we need to bound it
-		// For bal=0, 0 YYG is minted but the require condition in wrap would fail this, so we set bal > 0
-		vm.assume(bal > 0 && bal <= type(uint256).max / 100000);
-		vm.deal(alice, bal);
+        // Foundry fuzzer can gen upto 10^77, so we need to bound it
+        // For bal=0, 0 YYG is minted but the require condition in wrap would fail this, so we set bal > 0
+        vm.assume(bal > 0 && bal <= type(uint256).max / 100000);
+        vm.deal(alice, bal);
 
-		vm.prank(alice);
-		yyg.wrap{value: bal}();
-		assertEq(bal*100000, yyg.balanceOf(alice));
-	}
+        vm.prank(alice);
+        yyg.wrap{value: bal}();
+        assertEq(bal * 100000, yyg.balanceOf(alice));
+    }
 
-	function testUnwrap(uint256 amt) public {
-		address alice = makeAddr("aiSlopIsBadForHealth");
+    function testUnwrap(uint256 amt) public {
+        address alice = makeAddr("aiSlopIsBadForHealth");
 
-		// Foundry fuzzer can gen upto 10^77, so we need to bound it
-		// For amt=0, 0 YYG is minted but the require condition in unwrap would fail this, so we set amt > 0
-		vm.assume(amt > 0 && amt <= type(uint256).max / 100000);
-		vm.deal(alice, amt);
+        // Foundry fuzzer can gen upto 10^77, so we need to bound it
+        // For amt=0, 0 YYG is minted but the require condition in unwrap would fail this, so we set amt > 0
+        vm.assume(amt > 0 && amt <= type(uint256).max / 100000);
+        vm.deal(alice, amt);
 
-		vm.startPrank(alice);
-		yyg.wrap{value: amt}();
+        vm.startPrank(alice);
+        yyg.wrap{value: amt}();
 
-		// 100000 YYG = 1 sETH
-		yyg.unwrap(amt*100000);
-		vm.stopPrank();
+        // 100000 YYG = 1 sETH
+        yyg.unwrap(amt * 100000);
+        vm.stopPrank();
 
-		assertEq(alice.balance, amt);
-	}
+        assertEq(alice.balance, amt);
+    }
 
-	function testInsufficientBalance(uint256 stealAmt) public {
-		address alice = makeAddr("aiSlopIsBadForHealth");
+    function testUnwrapDustReverts() public {
+        address alice = makeAddr("aiSlopIsBadForHealth");
 
-		// We need to actually test stealing money, so stealAmt > 0
-		vm.assume(stealAmt > 0);
-		vm.deal(alice, 0);
+        vm.deal(alice, 1 ether);
 
-		vm.startPrank(alice);
+        vm.startPrank(alice);
+        yyg.wrap{value: 1 ether}();
 
-		// We expect a revert here
-		vm.expectRevert();
-		yyg.unwrap(stealAmt);
-		vm.stopPrank();
+        // 100001 YYG is not a multiple of the 100000 YYG-per-STT ratio -> dust
+        vm.expectRevert(YinYang.DustAmount.selector);
+        yyg.unwrap(100001);
+        vm.stopPrank();
+    }
 
-		assertEq(alice.balance, 0);
-	}
+    function testInsufficientBalance(uint256 stealAmt) public {
+        address alice = makeAddr("aiSlopIsBadForHealth");
+
+        // We need to actually test stealing money, so stealAmt > 0
+        vm.assume(stealAmt > 0);
+        vm.deal(alice, 0);
+
+        vm.startPrank(alice);
+
+        // We expect a revert here
+        vm.expectRevert();
+        yyg.unwrap(stealAmt);
+        vm.stopPrank();
+
+        assertEq(alice.balance, 0);
+    }
 }

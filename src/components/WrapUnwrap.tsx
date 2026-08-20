@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { Contract } from 'ethers'
 import { parseEther, parseUnits } from 'ethers'
 import type { useContracts } from '../hooks/useContracts'
 import { toast } from './Toast'
@@ -56,7 +55,7 @@ export function WrapUnwrap({
 
     setIsWrapping(true)
     try {
-      const yyg = contracts.yyg as Contract
+      const yyg = contracts.yyg
       const tx = await yyg.wrap({ value: parseEther(sttAmount) })
       await tx.wait()
       setSttAmount('')
@@ -77,9 +76,11 @@ export function WrapUnwrap({
 
     setIsUnwrapping(true)
     try {
-      const yyg = contracts.yyg as Contract
+      const yyg = contracts.yyg
       const yygWei = parseUnits(unwrapAmount.replace(/,/g, ''), 18)
-      const tx = await yyg.unwrap(yygWei)
+      // Floor to a multiple of RATIO so the contract's DustAmount check passes.
+      const floored = yygWei - (yygWei % BigInt(RATIO))
+      const tx = await yyg.unwrap(floored)
       await tx.wait()
       setUnwrapAmount('')
       setSttOutput('')
@@ -97,13 +98,15 @@ export function WrapUnwrap({
 
     setIsUnwrapping(true)
     try {
-      const yyg = contracts.yyg as Contract
+      const yyg = contracts.yyg
       const raw = await yyg.balanceOf(account)
-      if (raw === 0n) {
+      // Floor the raw balance to a multiple of RATIO so the contract's DustAmount check passes.
+      const floored = raw - (raw % BigInt(RATIO))
+      if (floored === 0n) {
         setIsUnwrapping(false)
         return
       }
-      const tx = await yyg.unwrap(raw)
+      const tx = await yyg.unwrap(floored)
       await tx.wait()
       setUnwrapAmount('')
       setSttOutput('')

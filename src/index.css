@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Jersey+10&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ===================================================================
-   Othello.s — Design System Tokens
+   Othello.s : Design System Tokens
    Mistral blocky structure × OpenCode dark tones
    Fonts: Jersey 10 (pixel headings) + JetBrains Mono (body/labels)
    =================================================================== */
@@ -43,7 +43,7 @@
   --color-stone:             #504C48;
   --color-muted:             #3A3632;
 
-  /* ─── Palette: Borders — VISIBLE, not invisible ─── */
+  /* ─── Palette: Borders : VISIBLE, not invisible ─── */
   --color-hairline:          rgba(240, 237, 232, 0.12);
   --color-hairline-soft:     rgba(240, 237, 232, 0.08);
   --color-hairline-medium:   rgba(240, 237, 232, 0.18);
@@ -137,8 +137,8 @@ img {
 
 /* ===================================================================
    Typography Scale
-   Jersey 10 — pixel-art headings, chunky & blocky
-   JetBrains Mono — body/labels, terminal aesthetic
+   Jersey 10 : pixel-art headings, chunky & blocky
+   JetBrains Mono : body/labels, terminal aesthetic
    =================================================================== */
 
 /* ─── Display: hero-level, huge pixel text ─── */
@@ -230,7 +230,7 @@ img {
 
 
 /* ===================================================================
-   Scrollbar — Thin dark treatment
+   Scrollbar : Thin dark treatment
    =================================================================== */
 
 ::-webkit-scrollbar {

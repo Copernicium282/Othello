@@ -1,5 +1,5 @@
 /* ===================================================================
-   Board — Classic Othello green board with black/white pixel chips
+   Board : Classic Othello green board with black/white pixel chips
    =================================================================== */
 
 .board-container {
@@ -22,7 +22,7 @@
   opacity: 0.6;
 }
 
-/* ─── Cells — green checkerboard ─── */
+/* ─── Cells : green checkerboard ─── */
 .board-cell {
   position: relative;
   display: flex;
@@ -40,7 +40,7 @@
   background: #2d7a40;
 }
 
-/* Legal move indicator — subtle dot */
+/* Legal move indicator : subtle dot */
 .board-cell--legal {
   background: rgba(255, 255, 255, 0.20);
   outline: 2px solid rgba(255, 255, 255, 0.35);
@@ -57,7 +57,7 @@
   cursor: pointer;
 }
 
-/* ─── Pieces — crisp pixel art ─── */
+/* ─── Pieces : crisp pixel art ─── */
 .piece-wrapper {
   display: flex;
   align-items: center;

@@ -13,14 +13,14 @@ export function HowToPlay() {
       </p>
       <img
         src="/images/how_to_play_othello_0.png"
-        alt="Starting position — four discs in the center"
+        alt="Starting position: four discs in the center"
         className="howtoplay-img"
       />
 
       <h2>Rules</h2>
       <p>
         On your turn you place one disc on any empty square. Your disc must outflank one
-        or more of your opponent's discs in a straight line — horizontally, vertically, or
+        or more of your opponent's discs in a straight line: horizontally, vertically, or
         diagonally. To outflank means there is an unbroken line of opponent discs between
         your newly placed disc and one of your existing discs on the other side.
       </p>
@@ -68,7 +68,7 @@ export function HowToPlay() {
       </ul>
       <img
         src="/images/basic_strategy_othello_1.png"
-        alt="Corner stability — stable discs around h8"
+        alt="Corner stability: stable discs around h8"
         className="howtoplay-img"
       />
       <ul>
@@ -92,7 +92,7 @@ export function HowToPlay() {
       </ul>
       <img
         src="/images/basic_strategy_othello_3.png"
-        alt="Mobility advantage — fewer discs but more options"
+        alt="Mobility advantage: fewer discs but more options"
         className="howtoplay-img"
       />
       <ul>
@@ -120,7 +120,7 @@ export function HowToPlay() {
         </li>
         <li>
           <strong>On-chain moves.</strong> Each move is a transaction on Somnia Shannon.
-          The board is represented as a bitboard — a compact format where each of the 64
+          The board is represented as a bitboard: a compact format where each of the 64
           positions maps to a single bit in a uint64 value. Move validation happens
           entirely in the smart contract, so cheating is impossible.
         </li>

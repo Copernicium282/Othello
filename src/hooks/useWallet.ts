@@ -4,7 +4,7 @@ import { BrowserProvider, JsonRpcSigner } from "ethers";
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
+      request: <T>(args: { method: string; params?: unknown[] }) => Promise<T>
       on: (event: string, cb: (...args: unknown[]) => void) => void
       removeListener: (event: string, cb: (...args: unknown[]) => void) => void
     }
@@ -41,13 +41,27 @@ export function useWallet() {
     try {
       // eth_requestAccounts prompts MetaMask popup
       // Returns an array of connected addresses
-      const accounts = await window.ethereum.request({
+      // SAFETY: EIP-1193 request resolves eth_requestAccounts to an array of hex addresses.
+      const accounts = await window.ethereum.request<string[]>({
         method: 'eth_requestAccounts',
-      }) as string[]
+      })
 
       const provider = new BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
       const network = await provider.getNetwork()
+
+      // SAFETY: network.chainId is a bigint in ethers v6; Somnia Shannon is 50312.
+      if (network.chainId !== 50312n) {
+        setState({
+          account: null,
+          provider: null,
+          signer: null,
+          chainId: Number(network.chainId),
+          isConnecting: false,
+          error: 'Wrong network: switch MetaMask to Somnia Shannon (chainId 50312)',
+        })
+        return
+      }
 
       setState({
         account: accounts[0],
@@ -71,6 +85,7 @@ export function useWallet() {
     if(!window.ethereum) return
 
     const handleAccounts = (...args: unknown[]) => {
+      // SAFETY: MetaMask emits accountsChanged with a single argument: an array of hex addresses.
       const accounts = args[0] as string[]
       if (accounts.length === 0) {
         setState({account: null, provider: null, signer: null, chainId: null, isConnecting: false, error: null})
@@ -78,7 +93,7 @@ export function useWallet() {
         // Re-init provider/signer with new account
         const provider = new BrowserProvider(window.ethereum!)
         provider.getSigner().then(signer => {
-          setState(s => ({ ...s, account: accounts[0] as string, provider, signer}))
+          setState(s => ({ ...s, account: accounts[0], provider, signer}))
         })
       }
     }

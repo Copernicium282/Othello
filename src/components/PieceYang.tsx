@@ -12,7 +12,7 @@ export function PieceYang({ size = '100%' }: PieceYangProps) {
       xmlns="http://www.w3.org/2000/svg"
       style={{ imageRendering: 'pixelated' }}
     >
-      {/* Solid white pixel-art disc — 12x12, no gradients */}
+      {/* Solid white pixel-art disc: 12x12, no gradients */}
       {/* Row 0:  _ _ X X X X X X _ _ */}
       <rect x="2" y="0" width="8" height="1" fill="#F5F5F5" />
       {/* Row 1:  _ X X X X X X X X _ */}

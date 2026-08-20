@@ -1,9 +1,9 @@
 // --- Contract addresses ---
 export const ADDRESSES = {
-  yyg: '0x615e6F1e9706A481B97373ff5c87FB0cf744dd15',
-  elo: '0x39125d25B352F064B943Ea9DA9C229bA0D3a69c1',
-  treasury: '0x1Ddf8F5A66DcBEfFF4983C70b7eB9A82709Ef9F1',
-  game: '0x2D0266830e6610e3dC7c00A3f8Bd7942936B130e',
+  yyg: '0x06441a070Ef37B3aC4a6D1C23522C95D036Ee873',
+  elo: '0x1e5187E2ebBa511924c1392aC2E9e298F78aC266',
+  treasury: '0x49240E7DBFd8de70200a3C3A7a76719D2669bCd5',
+  game: '0x35f2025701453EA0EF03Fb104323d8363630001B',
 } as const
 
 // --- Human-readable ABIs ---
@@ -32,7 +32,7 @@ export const ELO_ABI = [
   'function getELO(address player) view returns (uint256)',
   'function currSeason() view returns (uint256)',
   'function verifyTopThree(address[3] candidates) view',
-  'event ResultRecorded(address indexed winner, uint256 newWinnerElo, address indexed loser, uint256 newLoserElo)',
+  'event ELOUpdated(address indexed winner, uint256 newWinnerElo, address indexed loser, uint256 newLoserElo)',
 ] as const
 
 export const TREASURY_ABI = [

@@ -1,0 +1,222 @@
+/* ===================================================================
+   AI Game View
+   =================================================================== */
+
+.ai-game-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: var(--space-xl) 16px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+}
+
+/* ─── Setup Screen ─── */
+
+.ai-game-view__setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  max-width: 480px;
+  width: 100%;
+}
+
+.ai-game-view__eyebrow {
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+}
+
+.ai-game-view__subtitle {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-slate);
+  text-align: center;
+  margin-bottom: var(--space-md);
+}
+
+.ai-game-view__difficulties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.ai-game-view__diff-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline-medium);
+  border-radius: 0;
+  padding: var(--space-lg) var(--space-md);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: border-color var(--duration-fast) var(--ease-default), background var(--duration-fast) var(--ease-default);
+}
+
+.ai-game-view__diff-btn:hover {
+  border-color: var(--color-yin);
+  background: var(--color-surface-raised);
+}
+
+.ai-game-view__diff-label {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  color: var(--color-ink);
+}
+
+.ai-game-view__diff-desc {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-slate);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Board Area ─── */
+
+.ai-game-view__board-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 480px;
+}
+
+.ai-game-view__info-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-hairline-medium);
+}
+
+.ai-game-view__difficulty-badge {
+  color: var(--color-yang);
+}
+
+.ai-game-view__turn-info {
+  color: var(--color-ink-tint);
+}
+
+/* ─── Counts ─── */
+
+.ai-game-view__counts {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-hairline-medium);
+}
+
+.ai-game-view__count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-game-view__count-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+}
+
+.ai-game-view__count-dot--yin {
+  background: #1a1a1a;
+  border: 1px solid #444;
+}
+
+.ai-game-view__count-dot--yang {
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+}
+
+.ai-game-view__count-num {
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.0;
+  color: var(--color-ink);
+}
+
+.ai-game-view__count-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate);
+}
+
+/* ─── Game Over ─── */
+
+.ai-game-view__gameover {
+  width: 100%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-hairline-strong);
+  padding: var(--space-xxl);
+  text-align: center;
+  margin-top: var(--space-lg);
+}
+
+.ai-game-view__gameover-title {
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  margin-bottom: var(--space-md);
+}
+
+.ai-game-view__gameover-score {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 400;
+  color: var(--color-yin);
+  margin-bottom: var(--space-md);
+}
+
+.ai-game-view__gameover-detail {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-slate);
+}
+
+/* ─── New Game Button ─── */
+
+.ai-game-view__new-game-btn {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--color-hairline-medium);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  height: 40px;
+  padding: 0 20px;
+  width: 100%;
+  margin-top: var(--space-md);
+  transition: border-color var(--duration-fast) var(--ease-default), background var(--duration-fast) var(--ease-default);
+}
+
+.ai-game-view__new-game-btn:hover {
+  border-color: var(--color-yang);
+  background: var(--color-surface-raised);
+}

@@ -1,9 +1,11 @@
 import './Footer.css'
 
+export type FooterPage = 'play' | 'howtoplay' | 'team'
+
 interface FooterLink {
   label: string
   href?: string
-  navTo?: string
+  navTo?: FooterPage
 }
 
 const linkSections: { title: string; links: FooterLink[] }[] = [
@@ -31,7 +33,7 @@ const linkSections: { title: string; links: FooterLink[] }[] = [
   },
 ]
 
-export function Footer({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function Footer({ onNavigate }: { onNavigate: (page: FooterPage) => void }) {
   return (
     <footer className="site-footer">
       <div className="footer-inner">
@@ -46,7 +48,7 @@ export function Footer({ onNavigate }: { onNavigate: (page: string) => void }) {
                       <button
                         type="button"
                         className="footer-link"
-                        onClick={() => onNavigate(link.navTo!)}
+                        onClick={() => { if (link.navTo) onNavigate(link.navTo) }}
                       >
                         {link.label}
                       </button>

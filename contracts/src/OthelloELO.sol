@@ -13,20 +13,21 @@ contract OthelloELO is Ownable {
     uint256 public currSeason;
     address public OthelloGame;
     address public OthelloTreasury;
+    uint256 constant DEFAULT_ELO = 1200 * 1e18;
 
     event ELOUpdated(address indexed winner, uint256 newWinnerElo, address indexed loser, uint256 newLoserElo);
 
-    constructor(address initialOwner) Ownable(initialOwner){
+    constructor(address initialOwner) Ownable(initialOwner) {
         currSeason = 0;
     }
 
     modifier onlyGame() {
-        if(msg.sender != OthelloGame) revert UnauthorizedCaller();
-	_;
+        if (msg.sender != OthelloGame) revert UnauthorizedCaller();
+        _;
     }
 
     modifier onlyGameOrTreasury() {
-        if(msg.sender != OthelloGame && msg.sender != OthelloTreasury) revert UnauthorizedCaller();
+        if (msg.sender != OthelloGame && msg.sender != OthelloTreasury) revert UnauthorizedCaller();
         _;
     }
 
@@ -39,15 +40,26 @@ contract OthelloELO is Ownable {
     }
 
     function resetSeason() external onlyGameOrTreasury {
-        unchecked { currSeason += 1; }
+        unchecked {
+            currSeason += 1;
+        }
     }
 
-    function getELO(address player) public returns (uint256){
-        if(elo[currSeason][player] == 0) elo[currSeason][player] = uint256(1200 * 1e18);
-        return elo[currSeason][player];
+    function getELO(address player) public view returns (uint256) {
+        uint256 stored = elo[currSeason][player];
+        return stored == 0 ? DEFAULT_ELO : stored;
     }
 
-    function _setEloForTest(uint256 season, address player, uint256 rating) external onlyOwner{
+    function _getELOOrInit(address player) internal returns (uint256) {
+        uint256 stored = elo[currSeason][player];
+        if (stored == 0) {
+            elo[currSeason][player] = DEFAULT_ELO;
+            return DEFAULT_ELO;
+        }
+        return stored;
+    }
+
+    function _setEloForTest(uint256 season, address player, uint256 rating) external onlyOwner {
         elo[season][player] = rating;
     }
 
@@ -60,11 +72,11 @@ contract OthelloELO is Ownable {
     /// @param loser address of loser.
     function recordResult(address winner, address loser) external onlyGame {
         int8 kfactor = 32;
-        int256 eloWinner = int256(getELO(winner));
-        int256 eloLoser = int256(getELO(loser));
+        int256 eloWinner = int256(_getELOOrInit(winner));
+        int256 eloLoser = int256(_getELOOrInit(loser));
         int256 diff = eloLoser - eloWinner;
 
-        if(diff < -800e18 || diff > 800e18) revert EloDiffTooLarge();
+        if (diff < -800e18 || diff > 800e18) revert EloDiffTooLarge();
         SD59x18 ELOdiff = sd(diff).div(sd(400e18));
         SD59x18 experimental = sd(10e18).pow(ELOdiff);
         SD59x18 expectedScore = sd(1e18).div(sd(1e18).add(experimental));
@@ -79,17 +91,15 @@ contract OthelloELO is Ownable {
     /// @notice Verify that 3 addresses form a valid top-3 leaderboard.
     /// @dev Checks: distinct addresses, all have ELO > 0, sorted descending by ELO.
     function verifyTopThree(address[3] calldata candidates) external view {
-        if(
-            candidates[0] == candidates[1] ||
-            candidates[1] == candidates[2] ||
-            candidates[0] == candidates[2]
-        ) revert InvalidTopThree();
+        if (candidates[0] == candidates[1] || candidates[1] == candidates[2] || candidates[0] == candidates[2]) {
+            revert InvalidTopThree();
+        }
 
         uint256 elo0 = elo[currSeason][candidates[0]];
         uint256 elo1 = elo[currSeason][candidates[1]];
         uint256 elo2 = elo[currSeason][candidates[2]];
 
-        if(elo0 == 0 || elo1 == 0 || elo2 == 0) revert InvalidTopThree();
-        if(elo0 < elo1 || elo1 < elo2) revert InvalidTopThree();
+        if (elo0 == 0 || elo1 == 0 || elo2 == 0) revert InvalidTopThree();
+        if (elo0 < elo1 || elo1 < elo2) revert InvalidTopThree();
     }
 }

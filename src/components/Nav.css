@@ -1,5 +1,5 @@
 /* ===================================================================
-   Primary Navigation — Full-width, logo left, wallet right
+   Primary Navigation : Full-width, logo left, wallet right
    =================================================================== */
 
 .primary-nav {
@@ -82,7 +82,7 @@
   background-color: var(--color-yin);
 }
 
-/* ─── Wallet Button — pushed to right edge ─── */
+/* ─── Wallet Button : pushed to right edge ─── */
 .nav-wallet-btn {
   padding: 0 var(--space-xl);
   font-family: var(--font-mono);

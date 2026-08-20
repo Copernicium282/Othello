@@ -7,20 +7,23 @@ import "../src/OthelloELO.sol";
 contract OthelloELOTest is Test {
     OthelloELO public ELO;
 
-    function setUp() public{
+    function setUp() public {
         ELO = new OthelloELO(address(this));
 
         // fake as onlyGame
         ELO.setGame(address(this));
     }
 
-    function testInitialElo(address alice) public{
+    function testInitialElo(address alice) public {
         assertEq(ELO.getELO(alice), 1200e18);
     }
 
     uint256 currSeason = 1;
 
-    function testEloCalculationHelper(address winner, uint256 eloWinner, address loser, uint256 eloLoser) internal returns (uint256 initEloWinner, uint256 updatedELoWinner, uint256 initEloLoser, uint256 updatedEloLoser) {
+    function testEloCalculationHelper(address winner, uint256 eloWinner, address loser, uint256 eloLoser)
+        internal
+        returns (uint256 initEloWinner, uint256 updatedELoWinner, uint256 initEloLoser, uint256 updatedEloLoser)
+    {
         // max diff should be 800e18 as to not trigger the high diff require
         vm.assume(winner != loser);
         eloWinner = bound(eloWinner, 800e18, 1600e18);
@@ -39,22 +42,24 @@ contract OthelloELOTest is Test {
         updatedEloLoser = ELO.getELO(loser);
     }
 
-    function testRecordResult(address winner, uint256 eloWinner, address loser, uint256 eloLoser) public{
+    function testRecordResult(address winner, uint256 eloWinner, address loser, uint256 eloLoser) public {
         vm.assume(winner != loser);
-        (uint256 initEloWinner, uint256 updatedELoWinner, uint256 initEloLoser, uint256 updatedEloLoser) = testEloCalculationHelper(winner, eloWinner, loser, eloLoser);
+        (uint256 initEloWinner, uint256 updatedELoWinner, uint256 initEloLoser, uint256 updatedEloLoser) =
+            testEloCalculationHelper(winner, eloWinner, loser, eloLoser);
 
         assertTrue(updatedELoWinner >= initEloWinner, "winner must not lose ELO");
         assertTrue(updatedEloLoser <= initEloLoser, "loser must not gain ELO");
     }
 
-    function testSymmetry(address winner, uint256 eloWinner, address loser, uint256 eloLoser) public{
+    function testSymmetry(address winner, uint256 eloWinner, address loser, uint256 eloLoser) public {
         vm.assume(winner != loser);
-        (uint256 initEloWinner, uint256 updatedELoWinner, uint256 initEloLoser, uint256 updatedEloLoser) = testEloCalculationHelper(winner, eloWinner, loser, eloLoser);
+        (uint256 initEloWinner, uint256 updatedELoWinner, uint256 initEloLoser, uint256 updatedEloLoser) =
+            testEloCalculationHelper(winner, eloWinner, loser, eloLoser);
 
-        assertEq(updatedELoWinner-initEloWinner, initEloLoser-updatedEloLoser);
+        assertEq(updatedELoWinner - initEloWinner, initEloLoser - updatedEloLoser);
     }
 
-    function testSeasonReset(address winner, uint256 eloWinner, address loser, uint256 eloLoser) public{
+    function testSeasonReset(address winner, uint256 eloWinner, address loser, uint256 eloLoser) public {
         testEloCalculationHelper(winner, eloWinner, loser, eloLoser);
 
         ELO.resetSeason();
@@ -62,7 +67,7 @@ contract OthelloELOTest is Test {
         assertEq(ELO.getELO(loser), 1200e18);
     }
 
-    function testOnlyGame(address winner, uint256 eloWinner, address loser, uint256 eloLoser, address nonGame) public{
+    function testOnlyGame(address winner, uint256 eloWinner, address loser, uint256 eloLoser, address nonGame) public {
         // below is probably not even possible in a lifetime but who cares
         vm.assume(nonGame != address(this) && nonGame != address(ELO) && nonGame != address(0));
         ELO.setGame(nonGame);

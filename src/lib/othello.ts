@@ -1,4 +1,4 @@
-/** Pure Othello bitboard logic — mirrors Solidity flip-direction logic. */
+/** Pure Othello bitboard logic, mirrors Solidity flip-direction logic. */
 
 export const INIT_BLACK = 0x0000000810000000n
 export const INIT_WHITE = 0x0000001008000000n
@@ -68,4 +68,12 @@ export function popcount(bits: bigint): number {
     count++
   }
   return count
+}
+
+/** Apply a move and return the new board state for both players. */
+export function makeMove(myBits: bigint, opBits: bigint, pos: number) {
+  const flipMask = getFlips(myBits, opBits, pos)
+  const newMy = myBits | (1n << BigInt(pos)) | flipMask
+  const newOp = opBits & ~flipMask
+  return { myBits: newMy, opBits: newOp }
 }

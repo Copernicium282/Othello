@@ -8,6 +8,7 @@ import { Nav } from './components/Nav'
 import { YinYangStripe } from './components/YinYangStripe'
 import { Footer } from './components/Footer'
 import { GameView } from './components/GameView'
+import { AIGameView } from './components/AIGameView'
 import { Leaderboard } from './components/Leaderboard'
 import type { Player } from './components/Leaderboard'
 import { Treasury } from './components/Treasury'
@@ -18,7 +19,7 @@ import { ADDRESSES } from './lib/contracts'
 import { ToastContainer, toast } from './components/Toast'
 import './App.css'
 
-export type Tab = 'play' | 'leaderboard' | 'treasury' | 'wrap' | 'team' | 'howtoplay'
+export type Tab = 'play' | 'ai' | 'leaderboard' | 'treasury' | 'wrap' | 'team' | 'howtoplay'
 
 function PageContent({
   activeTab,
@@ -76,9 +77,30 @@ function PageContent({
               )
               await approveTx.wait()
               const tx = await contracts.game.createGame(opponent, stakeWei)
-              await tx.wait()
-              const nextId = await contracts.game.nextGameId()
-              const newGameId = String(BigInt(nextId) - 1n)
+              const receipt = await tx.wait()
+              let newGameId: string | null = null
+              if (receipt) {
+                for (const log of receipt.logs) {
+                  try {
+                    // SAFETY: parseLog decodes the receipt log against the GameCreated
+                    // event ABI; args.gameId is a uint256 indexed param (bigint).
+                    const parsed = contracts.game.interface.parseLog({
+                      topics: log.topics,
+                      data: log.data,
+                    })
+                    if (parsed && parsed.name === 'GameCreated') {
+                      newGameId = String(parsed.args.gameId)
+                      break
+                    }
+                  } catch {
+                    // Not a GameCreated log
+                  }
+                }
+              }
+              if (newGameId === null) {
+                const nextId = await contracts.game.nextGameId()
+                newGameId = String(BigInt(nextId) - 1n)
+              }
               setGameId(newGameId)
               toast('success', 'Game created! Game #' + newGameId)
             } catch {
@@ -112,6 +134,8 @@ function PageContent({
           pendingGames={pendingGames}
         />
       )
+    case 'ai':
+      return <AIGameView />
     case 'leaderboard':
       return (
         <Leaderboard
@@ -127,6 +151,7 @@ function PageContent({
       const days = Math.floor(remaining / 86400)
       const hours = Math.floor((remaining % 86400) / 3600)
       const minutes = Math.floor((remaining % 3600) / 60)
+      const top3 = players.slice(0, 3)
       return (
         <Treasury
           balance={treasuryBalance}
@@ -134,6 +159,9 @@ function PageContent({
           seasonHours={hours}
           seasonMinutes={minutes}
           seasonEnded={remaining <= 0}
+          firstPlace={top3[0] ? { address: top3[0].address, percent: 50 } : undefined}
+          secondPlace={top3[1] ? { address: top3[1].address, percent: 30 } : undefined}
+          thirdPlace={top3[2] ? { address: top3[2].address, percent: 20 } : undefined}
           onSettle={async () => {
             if (!contracts) return
             try {
@@ -149,7 +177,7 @@ function PageContent({
               fetchTreasury()
             } catch (err) {
               console.error(err)
-              toast('error', 'Settle failed — season may not have ended yet')
+              toast('error', 'Settle failed: season may not have ended yet')
             }
           }}
         />
@@ -212,11 +240,14 @@ export function App() {
   const fetchLeaderboard = useCallback(async () => {
     if (!contracts) return
     try {
-      const logs = await contracts.elo.queryFilter('ResultRecorded', 0, 'latest') as EventLog[]
+      // SAFETY: queryFilter returns EventLog[] when given a string filter, per ethers v6.
+      const logs = await contracts.elo.queryFilter('ELOUpdated', 0, 'latest') as EventLog[]
       const playerMap = new Map<string, { wins: number; losses: number; elo: number }>()
 
       for (const log of logs) {
+        // SAFETY: ELOUpdated emits (address indexed winner, ..., address indexed loser, ...).
         const winner = log.args.winner as string
+        // SAFETY: loser is the second indexed address in ELOUpdated.
         const loser = log.args.loser as string
 
         const winnerEntry = playerMap.get(winner) ?? { wins: 0, losses: 0, elo: 0 }
@@ -263,11 +294,15 @@ export function App() {
   const fetchPendingGames = useCallback(async () => {
     if (!contracts) return
     try {
+      // SAFETY: queryFilter returns EventLog[] when given a string filter, per ethers v6.
       const logs = await contracts.game.queryFilter('GameCreated', 0, 'latest') as EventLog[]
       const pending: Array<{ gameId: string; challenger: string; stake: string }> = []
       for (const log of logs) {
+        // SAFETY: GameCreated emits (uint256 indexed gameId, address indexed challenger, uint256 stake).
         const logGameId = String(log.args.gameId as bigint)
+        // SAFETY: challenger is the indexed address in GameCreated.
         const challenger = log.args.challenger as string
+        // SAFETY: stake is the third, non-indexed uint256 in GameCreated.
         const stakeRaw = log.args.stake as bigint
         try {
           const gameData = await contracts.game.games(logGameId)
@@ -296,6 +331,12 @@ export function App() {
     fetchLeaderboard()
     fetchTreasury()
     fetchPendingGames()
+    const id = setInterval(() => {
+      fetchLeaderboard()
+      fetchTreasury()
+      fetchPendingGames()
+    }, 30000)
+    return () => clearInterval(id)
   }, [fetchLeaderboard, fetchTreasury, fetchPendingGames])
 
   return (
@@ -329,7 +370,7 @@ export function App() {
         />
       </main>
       <YinYangStripe />
-      <Footer onNavigate={(page) => setActiveTab(page as Tab)} />
+      <Footer onNavigate={setActiveTab} />
     </div>
   )
 }
