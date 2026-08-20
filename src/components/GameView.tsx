@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import type { GameState } from '../hooks/useGame'
 import type { Contracts } from '../hooks/useContracts'
+import type { SessionActions, SessionResult, SessionStatus } from '../hooks/useSession'
 import { Board } from './Board'
 import { GameStatusBar } from './GameStatusBar'
 import { GameLobby } from './GameLobby'
@@ -18,6 +20,17 @@ export interface GameViewProps {
   pendingGames?: Array<{ gameId: string; challenger: string; stake: string }>
   showFlipCounts?: boolean
   onToggleFlipCounts?: () => void
+  onRenewSession: (gameId: string) => Promise<SessionResult>
+  onRevokeSession: () => Promise<SessionResult>
+  session: SessionActions
+}
+
+type SessionChip = 'session' | 'expired' | 'direct'
+
+function chipFromStatus(status: SessionStatus, inThisGame: boolean): SessionChip {
+  if (status.active) return 'session'
+  if (status.expired && inThisGame) return 'expired'
+  return 'direct'
 }
 
 function shorten(addr: string): string {
@@ -39,7 +52,70 @@ export function GameView({
   pendingGames = [],
   showFlipCounts = false,
   onToggleFlipCounts,
+  onRenewSession,
+  onRevokeSession,
+  session,
 }: GameViewProps) {
+  const [sessionChip, setSessionChip] = useState<SessionChip>('direct')
+  const [renewing, setRenewing] = useState(false)
+  const [revoking, setRevoking] = useState(false)
+  const [cancelled, setCancelled] = useState(false)
+
+  useEffect(() => {
+    setCancelled(false)
+  }, [gameId])
+
+  const inThisGame =
+    account !== null &&
+    (account.toLowerCase() === game.p1Addr.toLowerCase() ||
+      account.toLowerCase() === game.p2Addr.toLowerCase())
+
+  useEffect(() => {
+    let cancelled = false
+    if (gameId) {
+      session.isSessionActive(gameId).then(status => {
+        if (!cancelled) setSessionChip(chipFromStatus(status, inThisGame))
+      })
+    } else {
+      setSessionChip('direct')
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [gameId, session, game.status, inThisGame])
+
+  const handleRenew = async () => {
+    if (!gameId || renewing) return
+    setRenewing(true)
+    try {
+      const res = await onRenewSession(gameId)
+      if (res.ok) {
+        toast('success', 'Session renewed!')
+        setSessionChip('session')
+      } else if (res.reason !== 'not-deployed') {
+        toast('info', 'Renewal failed, moves will use direct signing')
+      }
+    } finally {
+      setRenewing(false)
+    }
+  }
+
+  const handleRevoke = async () => {
+    if (revoking) return
+    setRevoking(true)
+    try {
+      const res = await onRevokeSession()
+      if (res.ok) {
+        toast('success', 'Session revoked')
+        setSessionChip('direct')
+      } else {
+        toast('info', 'Revoke failed, session will expire on its own')
+      }
+    } finally {
+      setRevoking(false)
+    }
+  }
+
   const opponent = account
     ? account.toLowerCase() === game.p1Addr.toLowerCase()
       ? game.p2Addr
@@ -54,15 +130,38 @@ export function GameView({
   const handleCellClick = async (position: number) => {
     if (!contracts || !gameId || !account) return
     onMovePending(true)
+    let sessionSent = false
     try {
-      const tx = await contracts.game.makeMove(gameId, position)
-      await tx.wait()
+      const status = await session.isSessionActive(gameId)
+      setSessionChip(chipFromStatus(status, inThisGame))
+      if (status.active) {
+        const res = await session.submitMove(gameId, position)
+        if (res.ok) {
+          sessionSent = true
+          onMovePending(false)
+        } else if (res.reason === 'reverted') {
+          sessionSent = true
+          onMovePending(false)
+          toast('error', 'Move failed: transaction reverted')
+        } else if (res.reason === 'funds') {
+          toast('info', 'Session key out of gas, using direct signing')
+        }
+      }
+      if (!sessionSent) {
+        const tx = await contracts.game.makeMove(gameId, position)
+        await tx.wait()
+      }
     } catch {
       toast('error', 'Move failed: invalid or not your turn')
     } finally {
-      onMovePending(false)
+      if (!sessionSent) onMovePending(false)
     }
   }
+
+  // A never-started FINISHED game (empty bitboards) can only have been
+  // cancelled, which refunds the full stake with no fee.
+  const cancelledGame =
+    cancelled || (game.status === 2 && game.blackBits === 0n && game.whiteBits === 0n)
 
   return (
     <div className="game-view">
@@ -86,6 +185,31 @@ export function GameView({
             >
               flip #{showFlipCounts ? 'on' : 'off'}
             </button>
+            <span
+              className="flip-toggle"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'default' }}
+            >
+              <span
+                className="game-status-bar__dot"
+                style={{
+                  background:
+                    sessionChip === 'session' ? '#2e9e44' : sessionChip === 'expired' ? '#d9a514' : '#9a938b',
+                  border: `1px solid ${
+                    sessionChip === 'session' ? '#1e7a33' : sessionChip === 'expired' ? '#a87f0a' : '#6e6a64'
+                  }`,
+                }}
+              />
+              {sessionChip === 'session' ? 'Session' : sessionChip === 'expired' ? 'Expired' : 'Direct'}
+              {sessionChip === 'expired' && (
+                <button
+                  className="flip-toggle"
+                  disabled={renewing}
+                  onClick={handleRenew}
+                >
+                  Renew
+                </button>
+              )}
+            </span>
             <span className="game-view__opponent">
               {opponent ? `vs ${shorten(opponent)}` : ''}
             </span>
@@ -116,14 +240,25 @@ export function GameView({
             {game.blackCount} - {game.whiteCount}
           </div>
           <div className="game-over__detail">
-            {game.blackCount === game.whiteCount
-              ? "It's a draw: both players got their stakes back (96% each)."
-              : account &&
-                  ((account.toLowerCase() === game.p1Addr.toLowerCase() && game.blackCount > game.whiteCount) ||
-                    (account.toLowerCase() === game.p2Addr.toLowerCase() && game.whiteCount > game.blackCount))
-                ? 'You won! YYG has been sent to your wallet.'
-                : 'You lost. Better luck next time.'}
+            {cancelledGame
+              ? 'Game cancelled - your full stake was refunded'
+              : game.blackCount === game.whiteCount
+                ? "It's a draw: both players got their stakes back (96% each)."
+                : account &&
+                    ((account.toLowerCase() === game.p1Addr.toLowerCase() && game.blackCount > game.whiteCount) ||
+                      (account.toLowerCase() === game.p2Addr.toLowerCase() && game.whiteCount > game.blackCount))
+                  ? 'You won! YYG has been sent to your wallet.'
+                  : 'You lost. Better luck next time.'}
           </div>
+          {(sessionChip === 'session' || sessionChip === 'expired') && (
+            <button
+              className="flip-toggle"
+              disabled={revoking}
+              onClick={handleRevoke}
+            >
+              Revoke session
+            </button>
+          )}
         </div>
       )}
 
@@ -137,6 +272,7 @@ export function GameView({
             try {
               const tx = await contracts.game.cancelGame(gameId)
               await tx.wait()
+              setCancelled(true)
               toast('success', 'Game cancelled, stake returned')
             } catch {
               toast('error', 'Failed to cancel game')

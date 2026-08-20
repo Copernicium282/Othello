@@ -72,4 +72,39 @@ contract YinYangTest is Test {
 
         assertEq(alice.balance, 0);
     }
+
+    function testPermitSetsAllowance(uint256 value, uint256 deadline) public {
+        uint256 pk = 0xA11CE;
+        address owner = vm.addr(pk);
+        address spender = makeAddr("game");
+        // Any future deadline is valid; value is a full uint256 (permit is unbounded)
+        deadline = bound(deadline, block.timestamp + 1, block.timestamp + 365 days);
+
+        bytes32 typeHash =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 structHash = keccak256(abi.encode(typeHash, owner, spender, value, yyg.nonces(owner), deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", yyg.DOMAIN_SEPARATOR(), structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        yyg.permit(owner, spender, value, deadline, v, r, s);
+
+        assertEq(yyg.allowance(owner, spender), value);
+        assertEq(yyg.nonces(owner), 1, "nonce must increment");
+    }
+
+    function testPermitExpiredDeadlineReverts(uint256 deadline) public {
+        uint256 pk = 0xA11CE;
+        address owner = vm.addr(pk);
+        address spender = makeAddr("game");
+        deadline = bound(deadline, 0, block.timestamp - 1);
+
+        bytes32 typeHash =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 structHash = keccak256(abi.encode(typeHash, owner, spender, 100e18, yyg.nonces(owner), deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", yyg.DOMAIN_SEPARATOR(), structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        vm.expectRevert();
+        yyg.permit(owner, spender, 100e18, deadline, v, r, s);
+    }
 }

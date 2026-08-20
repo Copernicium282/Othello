@@ -374,7 +374,7 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
 
         (,, Status st,) = harness.record(0);
         assertTrue(st == Status.ACTIVE, "single pass must NOT settle the game");
-        (,,, , Status stChk, bool blackToMove,) = harness.games(0);
+        (,,,, Status stChk, bool blackToMove,) = harness.games(0);
         assertTrue(stChk == Status.ACTIVE && blackToMove, "pass should flip the turn back to black");
 
         // The pass-back means it is still black's turn: black can move again at 24.
@@ -429,7 +429,7 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         // alice moves 19 (flips white@27) -> turn flips to white (bob).
         vm.prank(alice);
         harness.makeMove(0, 19);
-        (,,, , Status stAfter, bool blackToMove,) = harness.games(0);
+        (,,,, Status stAfter, bool blackToMove,) = harness.games(0);
         assertTrue(stAfter == Status.ACTIVE && !blackToMove, "turn should now be white");
 
         // Now alice may not move again.

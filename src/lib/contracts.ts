@@ -1,9 +1,10 @@
 // --- Contract addresses ---
 export const ADDRESSES = {
-  yyg: '0x06441a070Ef37B3aC4a6D1C23522C95D036Ee873',
-  elo: '0x1e5187E2ebBa511924c1392aC2E9e298F78aC266',
-  treasury: '0x49240E7DBFd8de70200a3C3A7a76719D2669bCd5',
-  game: '0x35f2025701453EA0EF03Fb104323d8363630001B',
+  yyg: '0x86E9D0284Af16761AD1C3Ab0dbC5ddA6877eA51E',
+  elo: '0x423FBEf43A8de868758753f3E04c2733D3466099',
+  treasury: '0x713915Cc2ddB0E45622a7FC35E2A8c364784092A',
+  game: '0xfE8366E6Dd3b3D47eF899fd63c0b979d2b80A7f2',
+  sessionDelegate: '0x1438bd445364d04354e0d831e29702d8c6eea534',
 } as const
 
 // --- Human-readable ABIs ---
@@ -14,6 +15,8 @@ export const YYG_ABI = [
   'function decimals() view returns (uint8)',
   'function allowance(address owner, address spender) view returns (uint256)',
   'function approve(address spender, uint256 value) returns (bool)',
+  'function nonces(address) view returns (uint256)',
+  'function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)',
   'function wrap() payable',
   'function unwrap(uint256 amount)',
 ] as const

@@ -3,15 +3,16 @@ pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-contract YinYang is ERC20, Ownable {
+contract YinYang is ERC20, ERC20Permit, Ownable {
     error ZeroWrap();
     error ZeroAmount();
     error DustAmount();
     error ReentrancyGuard();
     error FailedSendEth();
 
-    constructor() ERC20("YinYang", "YYG") Ownable(msg.sender) {}
+    constructor() ERC20("YinYang", "YYG") ERC20Permit("YinYang") Ownable(msg.sender) {}
 
     receive() external payable {
         wrap();

@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { formatUnits, formatEther, parseUnits, MaxUint256, EventLog } from 'ethers'
+import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
 import { useWallet } from './hooks/useWallet'
 import { useContracts } from './hooks/useContracts'
 import { useGame } from './hooks/useGame'
+import { useSession } from './hooks/useSession'
+import type { SessionResult } from './hooks/useSession'
+import { client, somniaShannon } from './lib/thirdweb'
 import { PromoBanner } from './components/PromoBanner'
 import { Nav } from './components/Nav'
 import { YinYangStripe } from './components/YinYangStripe'
@@ -17,13 +21,40 @@ import { Team } from './components/Team'
 import { HowToPlay } from './components/HowToPlay'
 import { ADDRESSES } from './lib/contracts'
 import { ToastContainer, toast } from './components/Toast'
+import { signPermit, sendCallsBatch, waitForCalls, isMethodNotFound } from './lib/batch'
+import type { RpcError } from './lib/batch'
 import './App.css'
 
 export type Tab = 'play' | 'ai' | 'leaderboard' | 'treasury' | 'wrap' | 'team' | 'howtoplay'
 
+// 0.01 STT funded to the session key on accept, enough for move gas.
+const SESSION_FUND_WEI = 10n ** 16n
+
+/** Extract the GameCreated gameId from a tx/batch-call receipt, if present. */
+function parseGameId(
+  receipt: { logs: Array<{ topics: string[]; data: string }> } | undefined,
+  game: Contract,
+): string | null {
+  if (!receipt) return null
+  for (const log of receipt.logs) {
+    try {
+      // SAFETY: parseLog decodes the receipt log against the GameCreated
+      // event ABI; args.gameId is a uint256 indexed param (bigint).
+      const parsed = game.interface.parseLog({ topics: log.topics, data: log.data })
+      if (parsed && parsed.name === 'GameCreated') return String(parsed.args.gameId)
+    } catch {
+      // Not a GameCreated log
+    }
+  }
+  return null
+}
+
 function PageContent({
   activeTab,
   contracts,
+  signer,
+  provider,
+  session,
   yygBalance,
   sttBalance,
   account,
@@ -39,9 +70,14 @@ function PageContent({
   fetchTreasury,
   showFlipCounts,
   onToggleFlipCounts,
+  onRenewSession,
+  onRevokeSession,
 }: {
   activeTab: Tab
   contracts: ReturnType<typeof useContracts>
+  signer: JsonRpcSigner | null
+  provider: BrowserProvider | null
+  session: ReturnType<typeof useSession>
   yygBalance: string
   sttBalance: string
   account: string | null
@@ -57,6 +93,8 @@ function PageContent({
   fetchTreasury: () => void
   showFlipCounts: boolean
   onToggleFlipCounts: () => void
+  onRenewSession: (gameId: string) => Promise<SessionResult>
+  onRevokeSession: () => Promise<SessionResult>
 }) {
   const game = useGame(gameId, contracts, account)
 
@@ -71,39 +109,58 @@ function PageContent({
           txPending={txPending}
           onMovePending={setTxPending}
           onCreateGame={async (opponent, stake) => {
-            if (!contracts) return
+            if (!contracts || !account || !signer || !provider) return
             setTxPending(true)
             try {
               const stakeWei = parseUnits(stake, 18)
-              const approveTx = await contracts.yyg.approve(
-                contracts.game.target,
-                MaxUint256
-              )
-              await approveTx.wait()
-              const tx = await contracts.game.createGame(opponent, stakeWei)
-              const receipt = await tx.wait()
+              let parsedGameId: string | null = null
               let newGameId: string | null = null
-              if (receipt) {
-                for (const log of receipt.logs) {
-                  try {
-                    // SAFETY: parseLog decodes the receipt log against the GameCreated
-                    // event ABI; args.gameId is a uint256 indexed param (bigint).
-                    const parsed = contracts.game.interface.parseLog({
-                      topics: log.topics,
-                      data: log.data,
-                    })
-                    if (parsed && parsed.name === 'GameCreated') {
-                      newGameId = String(parsed.args.gameId)
-                      break
-                    }
-                  } catch {
-                    // Not a GameCreated log
-                  }
-                }
+              try {
+                const permit = await signPermit(contracts.yyg, signer, account, ADDRESSES.game, stakeWei)
+                const permitData = contracts.yyg.interface.encodeFunctionData('permit', [
+                  account,
+                  ADDRESSES.game,
+                  stakeWei,
+                  permit.deadline,
+                  permit.v,
+                  permit.r,
+                  permit.s,
+                ])
+                const createData = contracts.game.interface.encodeFunctionData('createGame', [opponent, stakeWei])
+                const bundleId = await sendCallsBatch(provider, account, [
+                  { to: ADDRESSES.yyg, data: permitData },
+                  { to: ADDRESSES.game, data: createData },
+                  { to: session.sessionKey.address, data: '0x', value: '0x' + SESSION_FUND_WEI.toString(16) },
+                ])
+                const receipts = await waitForCalls(provider, bundleId)
+                parsedGameId = parseGameId(receipts[receipts.length - 1]?.receipt, contracts.game)
+                newGameId = parsedGameId
+              } catch (err) {
+                // SAFETY: promise rejections from RPC calls are EIP-1193 errors; only
+                // the code/message fields are inspected to choose the fallback path.
+                if (!isMethodNotFound(err as RpcError)) throw err
+                toast('info', 'Batching not supported, using 2-step flow')
+                const approveTx = await contracts.yyg.approve(ADDRESSES.game, MaxUint256)
+                await approveTx.wait()
+                const tx = await contracts.game.createGame(opponent, stakeWei)
+                const receipt = await tx.wait()
+                parsedGameId = parseGameId(receipt, contracts.game)
+                newGameId = parsedGameId
+                const fundTx = await signer.sendTransaction({
+                  to: session.sessionKey.address,
+                  value: SESSION_FUND_WEI,
+                })
+                await fundTx.wait()
               }
               if (newGameId === null) {
                 const nextId = await contracts.game.nextGameId()
                 newGameId = String(BigInt(nextId) - 1n)
+              }
+              if (parsedGameId !== null) {
+                const sessionResult = await session.registerSession({ gameId: parsedGameId, durationBlocks: 5000 })
+                if (!sessionResult.ok) {
+                  toast('info', 'Session setup failed, moves will use direct signing')
+                }
               }
               setGameId(newGameId)
               toast('success', 'Game created! Game #' + newGameId)
@@ -114,19 +171,49 @@ function PageContent({
             }
           }}
           onAcceptGame={async (id) => {
-            if (!contracts) return
+            if (!contracts || !account || !signer || !provider) return
             setGameId(id)
             setTxPending(true)
             try {
               const gameData = await contracts.game.games(id)
               const stakeWei = gameData[2][3]
-              const approveTx = await contracts.yyg.approve(
-                contracts.game.target,
-                MaxUint256
-              )
-              await approveTx.wait()
-              const tx = await contracts.game.acceptGame(id, stakeWei)
-              await tx.wait()
+              try {
+                const permit = await signPermit(contracts.yyg, signer, account, ADDRESSES.game, stakeWei)
+                const permitData = contracts.yyg.interface.encodeFunctionData('permit', [
+                  account,
+                  ADDRESSES.game,
+                  stakeWei,
+                  permit.deadline,
+                  permit.v,
+                  permit.r,
+                  permit.s,
+                ])
+                const acceptData = contracts.game.interface.encodeFunctionData('acceptGame', [id, stakeWei])
+                const bundleId = await sendCallsBatch(provider, account, [
+                  { to: ADDRESSES.yyg, data: permitData },
+                  { to: ADDRESSES.game, data: acceptData },
+                  { to: session.sessionKey.address, data: '0x', value: '0x' + SESSION_FUND_WEI.toString(16) },
+                ])
+                await waitForCalls(provider, bundleId)
+              } catch (err) {
+                // SAFETY: promise rejections from RPC calls are EIP-1193 errors; only
+                // the code/message fields are inspected to choose the fallback path.
+                if (!isMethodNotFound(err as RpcError)) throw err
+                toast('info', 'Batching not supported, using 2-step flow')
+                const approveTx = await contracts.yyg.approve(ADDRESSES.game, MaxUint256)
+                await approveTx.wait()
+                const tx = await contracts.game.acceptGame(id, stakeWei)
+                await tx.wait()
+                const fundTx = await signer.sendTransaction({
+                  to: session.sessionKey.address,
+                  value: SESSION_FUND_WEI,
+                })
+                await fundTx.wait()
+              }
+              const sessionResult = await session.registerSession({ gameId: id, durationBlocks: 5000 })
+              if (!sessionResult.ok) {
+                toast('info', 'Session setup failed, moves will use direct signing')
+              }
               toast('success', 'Game accepted!')
             } catch {
               toast('error', 'Failed to accept game')
@@ -136,8 +223,11 @@ function PageContent({
             }
           }}
           pendingGames={pendingGames}
+          session={session}
           showFlipCounts={showFlipCounts}
           onToggleFlipCounts={onToggleFlipCounts}
+          onRenewSession={onRenewSession}
+          onRevokeSession={onRevokeSession}
         />
       )
     case 'ai':
@@ -224,6 +314,15 @@ export function App() {
   const [seasonDeadline, setSeasonDeadline] = useState(0)
   const [pendingGames, setPendingGames] = useState<Array<{ gameId: string; challenger: string; stake: string }>>([])
   const [showFlipCounts, setShowFlipCounts] = useState(() => localStorage.getItem('othello.flipBadges') === '1')
+  const session = useSession({
+    client,
+    chain: somniaShannon,
+    provider: wallet.provider,
+    signer: wallet.signer,
+    contracts,
+    account: wallet.account,
+    gameId,
+  })
 
   const toggleFlipCounts = useCallback(() => {
     setShowFlipCounts(prev => !prev)
@@ -337,7 +436,7 @@ export function App() {
           // Game might not exist or be settled
         }
       }
-      setPendingGames(pending.slice(0, 10))
+      setPendingGames(pending.slice(-10))
     } catch {
       // Failed to fetch pending games
     }
@@ -374,6 +473,8 @@ export function App() {
         <PageContent
           activeTab={activeTab}
           contracts={contracts}
+          signer={wallet.signer}
+          provider={wallet.provider}
           yygBalance={yygBalance}
           sttBalance={sttBalance}
           account={wallet.account}
@@ -386,9 +487,14 @@ export function App() {
           treasuryBalance={treasuryBalance}
           seasonDeadline={seasonDeadline}
           pendingGames={pendingGames}
+          session={session}
           fetchTreasury={fetchTreasury}
           showFlipCounts={showFlipCounts}
           onToggleFlipCounts={toggleFlipCounts}
+          onRenewSession={async (id: string) =>
+            session.renewSession({ gameId: id, durationBlocks: 5000 })
+          }
+          onRevokeSession={async () => session.revokeSession()}
         />
       </main>
       <YinYangStripe />

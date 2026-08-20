@@ -12,7 +12,8 @@
   "dependencies": {
     "ethers": "^6.17.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "thirdweb": "^5.121.1"
   },
   "devDependencies": {
     "@oxlint/plugins": "^1.76.0",
