@@ -1,0 +1,38 @@
+/* ===================================================================
+   ErrorBoundary : Full-page fallback when a render throws
+   =================================================================== */
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  min-height: 100vh;
+  padding: var(--space-xxl) var(--layout-gutter);
+  text-align: center;
+  background-color: var(--color-canvas);
+}
+
+.error-boundary-title {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--color-yin);
+}
+
+.error-boundary-message {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--color-ink-tint);
+  max-width: 640px;
+  overflow-wrap: anywhere;
+}
+
+.error-boundary-note {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}

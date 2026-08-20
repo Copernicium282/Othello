@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/check-env.mjs && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -28,5 +28,11 @@
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "axios": "^1.19.0",
+    "js-yaml": "^4.3.1",
+    "nanoid": "^3.3.18",
+    "use-sync-external-store": "^1.4.0"
   }
 }

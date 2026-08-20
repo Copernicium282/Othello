@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { lazy, Suspense, useState, useEffect, useCallback } from 'react'
 import { formatUnits, formatEther, parseUnits, MaxUint256, EventLog } from 'ethers'
 import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
 import { useWallet } from './hooks/useWallet'
@@ -16,17 +16,18 @@ import { YinYangStripe } from './components/YinYangStripe'
 import { Footer } from './components/Footer'
 import { GameView } from './components/GameView'
 import { AIGameView } from './components/AIGameView'
-import { Leaderboard } from './components/Leaderboard'
 import type { Player } from './components/Leaderboard'
-import { Treasury } from './components/Treasury'
-import { WrapUnwrap } from './components/WrapUnwrap'
-import { Team } from './components/Team'
 import { HowToPlay } from './components/HowToPlay'
 import { ADDRESSES } from './lib/contracts'
 import { ToastContainer, toast } from './components/Toast'
 import { signPermit, sendCallsBatch, waitForCalls, isMethodNotFound } from './lib/batch'
 import type { RpcError } from './lib/batch'
 import './App.css'
+
+const Leaderboard = lazy(() => import('./components/Leaderboard').then(m => ({ default: m.Leaderboard })))
+const Treasury = lazy(() => import('./components/Treasury').then(m => ({ default: m.Treasury })))
+const WrapUnwrap = lazy(() => import('./components/WrapUnwrap').then(m => ({ default: m.WrapUnwrap })))
+const Team = lazy(() => import('./components/Team').then(m => ({ default: m.Team })))
 
 export type Tab = 'play' | 'ai' | 'leaderboard' | 'treasury' | 'wrap' | 'team' | 'howtoplay'
 
@@ -487,37 +488,39 @@ export function App() {
       />
       <ToastContainer />
       <main className="page-content">
-        <PageContent
-          activeTab={activeTab}
-          contracts={contracts}
-          signer={wallet.signer}
-          provider={wallet.provider}
-          yygBalance={yygBalance}
-          sttBalance={sttBalance}
-          account={wallet.account}
-          onBalanceRefresh={fetchBalances}
-          gameId={gameId}
-          setGameId={setGameId}
-          txPending={txPending}
-          setTxPending={setTxPending}
-          players={players}
-          treasuryBalance={treasuryBalance}
-          seasonDeadline={seasonDeadline}
-          pendingGames={pendingGames}
-          session={session}
-          fetchTreasury={fetchTreasury}
-          showFlipCounts={showFlipCounts}
-          onToggleFlipCounts={toggleFlipCounts}
-          onRenewSession={async (id: string) =>
-            session.renewSession({ gameId: id, durationBlocks: 5000 })
-          }
-          onRevokeSession={async () => session.revokeSession()}
-          onNavigate={setActiveTab}
-          onConnect={wallet.connect}
-          aiGameState={aiGame.state}
-          onAIStart={aiGame.startGame}
-          onAIPlayerMove={aiGame.playerMove}
-        />
+        <Suspense fallback={<div className="page-content">Loading...</div>}>
+          <PageContent
+            activeTab={activeTab}
+            contracts={contracts}
+            signer={wallet.signer}
+            provider={wallet.provider}
+            yygBalance={yygBalance}
+            sttBalance={sttBalance}
+            account={wallet.account}
+            onBalanceRefresh={fetchBalances}
+            gameId={gameId}
+            setGameId={setGameId}
+            txPending={txPending}
+            setTxPending={setTxPending}
+            players={players}
+            treasuryBalance={treasuryBalance}
+            seasonDeadline={seasonDeadline}
+            pendingGames={pendingGames}
+            session={session}
+            fetchTreasury={fetchTreasury}
+            showFlipCounts={showFlipCounts}
+            onToggleFlipCounts={toggleFlipCounts}
+            onRenewSession={async (id: string) =>
+              session.renewSession({ gameId: id, durationBlocks: 5000 })
+            }
+            onRevokeSession={async () => session.revokeSession()}
+            onNavigate={setActiveTab}
+            onConnect={wallet.connect}
+            aiGameState={aiGame.state}
+            onAIStart={aiGame.startGame}
+            onAIPlayerMove={aiGame.playerMove}
+          />
+        </Suspense>
       </main>
       <YinYangStripe />
       <Footer onNavigate={setActiveTab} />
