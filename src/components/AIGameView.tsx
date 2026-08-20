@@ -10,7 +10,13 @@ const DIFFICULTIES: { id: Difficulty; label: string; desc: string }[] = [
   { id: 'expert', label: 'Expert', desc: 'Deep search, depth 16' },
 ]
 
-export function AIGameView() {
+export function AIGameView({
+  showFlipCounts = false,
+  onToggleFlipCounts,
+}: {
+  showFlipCounts?: boolean
+  onToggleFlipCounts?: () => void
+}) {
   const { state, startGame, playerMove } = useAIGame()
 
   return (
@@ -38,6 +44,13 @@ export function AIGameView() {
             <span className="ai-game-view__difficulty-badge">
               AI: {DIFFICULTIES.find(d => d.id === state.difficulty)?.label}
             </span>
+            <button
+              className="flip-toggle"
+              aria-pressed={showFlipCounts}
+              onClick={onToggleFlipCounts}
+            >
+              flip #{showFlipCounts ? 'on' : 'off'}
+            </button>
             <span className="ai-game-view__turn-info">
               {state.gameStatus === 'thinking' && 'AI thinking...'}
               {state.gameStatus === 'playing' && 'Your turn'}
@@ -53,6 +66,8 @@ export function AIGameView() {
             onCellClick={state.gameStatus === 'playing' ? playerMove : undefined}
             isMyTurn={state.gameStatus === 'playing'}
             txPending={state.gameStatus === 'thinking'}
+            blackToMove={state.playerIsBlack ? state.gameStatus === 'playing' : state.gameStatus !== 'playing'}
+            showFlipCounts={showFlipCounts}
           />
           <div className="ai-game-view__counts">
             <span className="ai-game-view__count">

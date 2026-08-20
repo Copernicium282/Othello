@@ -51,6 +51,11 @@
   --color-hairline-intense:  rgba(240, 237, 232, 0.40);
   --color-divide:            rgba(240, 237, 232, 0.12);
 
+  /* ─── Palette: Disc Rails (ribbed spring rails) ─── */
+  --color-rail:              #1A1815;
+  --color-rail-rib:          #262320;
+  --color-rail-rib-dark:     #131110;
+
   /* ─── Palette: Semantic ─── */
   --color-success:           #2DD4A0;
   --color-warning:           #E8A020;

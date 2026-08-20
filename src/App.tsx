@@ -37,6 +37,8 @@ function PageContent({
   seasonDeadline,
   pendingGames,
   fetchTreasury,
+  showFlipCounts,
+  onToggleFlipCounts,
 }: {
   activeTab: Tab
   contracts: ReturnType<typeof useContracts>
@@ -53,6 +55,8 @@ function PageContent({
   seasonDeadline: number
   pendingGames: Array<{ gameId: string; challenger: string; stake: string }>
   fetchTreasury: () => void
+  showFlipCounts: boolean
+  onToggleFlipCounts: () => void
 }) {
   const game = useGame(gameId, contracts, account)
 
@@ -132,10 +136,17 @@ function PageContent({
             }
           }}
           pendingGames={pendingGames}
+          showFlipCounts={showFlipCounts}
+          onToggleFlipCounts={onToggleFlipCounts}
         />
       )
     case 'ai':
-      return <AIGameView />
+      return (
+        <AIGameView
+          showFlipCounts={showFlipCounts}
+          onToggleFlipCounts={onToggleFlipCounts}
+        />
+      )
     case 'leaderboard':
       return (
         <Leaderboard
@@ -212,6 +223,15 @@ export function App() {
   const [treasuryBalance, setTreasuryBalance] = useState('0')
   const [seasonDeadline, setSeasonDeadline] = useState(0)
   const [pendingGames, setPendingGames] = useState<Array<{ gameId: string; challenger: string; stake: string }>>([])
+  const [showFlipCounts, setShowFlipCounts] = useState(() => localStorage.getItem('othello.flipBadges') === '1')
+
+  const toggleFlipCounts = useCallback(() => {
+    setShowFlipCounts(prev => !prev)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('othello.flipBadges', showFlipCounts ? '1' : '0')
+  }, [showFlipCounts])
 
   const fetchBalances = useCallback(async () => {
     if (!wallet.account) {
@@ -367,6 +387,8 @@ export function App() {
           seasonDeadline={seasonDeadline}
           pendingGames={pendingGames}
           fetchTreasury={fetchTreasury}
+          showFlipCounts={showFlipCounts}
+          onToggleFlipCounts={toggleFlipCounts}
         />
       </main>
       <YinYangStripe />

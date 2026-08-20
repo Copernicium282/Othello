@@ -143,7 +143,7 @@ export function WrapUnwrap({
         </div>
 
         <div className="wrap-section">
-          <span className="eyebrow">Wrap STT → YYG</span>
+          <span className="eyebrow">Wrap STT to YYG</span>
           <p className="body-sm text-slate">
             Convert your STT into YinYang tokens at a 1:100,000 ratio
           </p>
@@ -182,7 +182,7 @@ export function WrapUnwrap({
         <div className="wrap-divider" />
 
         <div className="unwrap-section">
-          <span className="eyebrow">Unwrap YYG → STT</span>
+          <span className="eyebrow">Unwrap YYG to STT</span>
           <p className="body-sm text-slate">
             Convert your YinYang tokens back to STT at a 1:100,000 ratio
           </p>

@@ -1,69 +1,240 @@
 /* ===================================================================
-   Board : Classic Othello green board with black/white pixel chips
+   Board : Authentic Retro Console Othello Board & Pixel Disc Rails
    =================================================================== */
 
-.board-container {
+/* ─── Board Housing: Matte Dark Hardware Enclosure ─── */
+.board-housing {
   width: 100%;
   max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: #141416;
+  border: 4px solid #08080a;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.8);
+  padding: 14px 12px;
+  gap: 12px;
+  user-select: none;
+}
+
+.board-housing--pending {
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* ─── Disc Rails: Pixel-art Spring Loaded Coin Stacks ─── */
+.disc-rail-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.disc-rail-bezel {
+  width: 100%;
+  background: #0d0d0f;
+  padding: 7px 10px;
+  box-sizing: border-box;
+  border-top: 2px solid #000000;
+  border-bottom: 2px solid #282830;
+  border-left: 2px solid #000000;
+  border-right: 2px solid #282830;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.disc-rail-channel {
+  width: 100%;
+  height: 32px; /* Increased ~10-15% in Y-axis */
+  background: #050506;
+  display: flex;
+  align-items: center;
+  padding: 2px 3px;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #1a1a20;
+}
+
+/* Metallic rail guide lines inside slot */
+.disc-rail-channel::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.disc-rail-stack {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+}
+
+/* Individual pixel coin edge in the rail */
+.rail-chip-slot {
+  flex: 1;
+  height: 25px; /* Increased 10% in Y-axis */
+  min-width: 3px;
+  max-width: 14px;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.rail-chip-slot--filled.rail-chip-slot--white {
+  background: #f0f0f0;
+  border-top: 2px solid #ffffff;
+  border-bottom: 2px solid #9a9a9a;
+  box-shadow: inset 0 1px 0 #ffffff, inset 0 -1px 0 #555555, 1px 0 0 #222222;
+}
+
+.rail-chip-slot--filled.rail-chip-slot--black {
+  background: #2a2a2a;
+  border-top: 2px solid #4a4a4a;
+  border-bottom: 2px solid #0f0f0f;
+  box-shadow: inset 0 1px 0 #555555, inset 0 -1px 0 #000000, 1px 0 0 #080808;
+}
+
+.rail-chip-slot--empty {
+  background: #0e0e11;
+  border-top: 1px solid #000000;
+  border-bottom: 1px solid #181820;
+  opacity: 0.35;
+}
+
+/* ─── Board Mat (Green Frame / Bevel) ─── */
+.board-mat {
+  width: 100%;
+  background: #083818;
+  border-top: 3px solid #041f0d;
+  border-left: 3px solid #041f0d;
+  border-right: 3px solid #165e2d;
+  border-bottom: 3px solid #165e2d;
+  padding: 4px;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+}
+
+.board-grid {
+  width: 100%;
   aspect-ratio: 1;
-  background: #1a472a;
-  border: 4px solid #0f2d1a;
+  background: #0e3019;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  gap: 0;
-  padding: 0;
+  gap: 2px; /* Authentic grid lines between green tiles */
+  padding: 2px;
   box-sizing: border-box;
-  border-radius: 0;
 }
 
-.board-container--pending {
-  pointer-events: none;
-  opacity: 0.6;
-}
-
-/* ─── Cells : green checkerboard ─── */
+/* ─── Cells: Authentic Othello Green Raised Pixel Tiles ─── */
 .board-cell {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  background: #1e8746;
+  border-top: 2px solid #38bf6a;
+  border-left: 2px solid #38bf6a;
+  border-right: 2px solid #0d5427;
+  border-bottom: 2px solid #0d5427;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.25);
+  cursor: default;
   transition: background-color var(--duration-fast) var(--ease-default);
 }
 
-.board-cell--light {
-  background: #3a9a52;
+.board-cell__inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
-.board-cell--dark {
-  background: #2d7a40;
-}
-
-/* Legal move indicator : subtle dot */
+/* Legal move state */
 .board-cell--legal {
-  background: rgba(255, 255, 255, 0.20);
-  outline: 2px solid rgba(255, 255, 255, 0.35);
-  outline-offset: -2px;
+  background: #259e53;
   cursor: pointer;
 }
 
 .board-cell--legal:hover {
-  background: rgba(255, 255, 255, 0.30);
-  outline-color: rgba(255, 255, 255, 0.50);
+  background: #2cb962;
+  border-top-color: #55dd88;
+  border-left-color: #55dd88;
 }
 
 .board-cell--clickable {
   cursor: pointer;
 }
 
-/* ─── Pieces : crisp pixel art ─── */
+/* ─── Legal Move Indicators (Reference style matching image 1 & pixel vibe) ─── */
+.legal-move-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.legal-move-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: #1a743b;
+  border: 2px solid #0a3d1c;
+  color: #062410;
+  font-family: var(--font-heading);
+  font-size: 19px;
+  line-height: 1;
+  font-weight: bold;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.28),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    3px 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+.board-cell--legal:hover .legal-move-badge {
+  background: #22944b;
+  color: #041a0b;
+  border-color: #052b13;
+  transform: translate(-1px, -1px);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.28),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+}
+
+.legal-move-dot {
+  width: 10px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+/* ─── Pieces: Crisp pixel art ─── */
 .piece-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 80%;
-  height: 80%;
+  width: 84%;
+  height: 84%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.65));
 }
 
 .piece-yin,
@@ -73,5 +244,28 @@
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+/* ─── Flip-count toggle chip (shared by GameView / AIGameView) ─── */
+.flip-toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-hairline-medium);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.flip-toggle:hover {
+  color: var(--color-yang);
+  border-color: var(--color-hairline-strong);
+}
+
+.flip-toggle[aria-pressed='true'] {
+  color: var(--color-yang);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--color-yang);
 }

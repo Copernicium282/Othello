@@ -52,71 +52,20 @@ export function useAIGame() {
     thinkingRef.current = false
   }, [state.difficulty])
 
-  const playerMove = useCallback((pos: number) => {
-    setState(prev => {
-      if (prev.gameStatus !== 'playing') return prev
-      if (thinkingRef.current) return prev
-      
-      // Player is always black (playerIsBlack = true)
-      const myBits = prev.playerIsBlack ? prev.blackBits : prev.whiteBits
-      const opBits = prev.playerIsBlack ? prev.whiteBits : prev.blackBits
-      const moves = getLegalMoves(myBits, opBits)
-      if (!moves.includes(pos)) return prev
-      
-      const { myBits: newMy, opBits: newOp } = makeMove(myBits, opBits, pos)
-      const newBlack = prev.playerIsBlack ? newMy : newOp
-      const newWhite = prev.playerIsBlack ? newOp : newMy
-      const newBlackCount = popcount(newBlack)
-      const newWhiteCount = popcount(newWhite)
-      
-      // Check if game is over
-      const aiMy = !prev.playerIsBlack ? newBlack : newWhite
-      const aiOp = prev.playerIsBlack ? newBlack : newWhite
-      const aiMoves = getLegalMoves(aiMy, aiOp)
-      const playerMovesAfterAi = getLegalMoves(aiOp, aiMy)
-      
-      if (aiMoves.length === 0 && playerMovesAfterAi.length === 0) {
-        const r = getResult(newBlack, newWhite)
-        return {
-          ...prev,
-          blackBits: newBlack,
-          whiteBits: newWhite,
-          moveHistory: [...prev.moveHistory, pos],
-          legalMoves: [],
-          gameStatus: 'gameover',
-          result: r,
-          playerCount: prev.playerIsBlack ? newBlackCount : newWhiteCount,
-          aiCount: prev.playerIsBlack ? newWhiteCount : newBlackCount,
-        }
-      }
-      
-      thinkingRef.current = true
-      return {
-        ...prev,
-        blackBits: newBlack,
-        whiteBits: newWhite,
-        moveHistory: [...prev.moveHistory, pos],
-        legalMoves: [],
-        gameStatus: 'thinking',
-        playerCount: prev.playerIsBlack ? newBlackCount : newWhiteCount,
-        aiCount: prev.playerIsBlack ? newWhiteCount : newBlackCount,
-      }
-    })
-    
-    // Trigger AI move after state update
+  // Schedule the AI's move 100ms after a state transition so 'thinking'
+  // renders first. Runs outside any updater (avoids StrictMode double-invoke
+  // and lets 'thinking' render before the search starts).
+  const runAIMove = useCallback(() => {
     setTimeout(() => {
       const prev = stateRef.current
       if (prev.gameStatus !== 'thinking') return
 
-      // AI is white (player is black)
-      const aiBits = prev.whiteBits
-      const playerBits = prev.blackBits
-      // SAFETY: computed before setState so the search never runs inside an
-      // updater (avoids StrictMode double-invoke and lets 'thinking' render first).
+      const playerBits = prev.playerIsBlack ? prev.blackBits : prev.whiteBits
+      const aiBits = prev.playerIsBlack ? prev.whiteBits : prev.blackBits
       const best = getBestMove(aiBits, playerBits, prev.difficulty)
 
       if (!best) {
-        // AI has no moves : check if player can go again or game over
+        // AI has no moves : pass back to the player or end the game
         const playerMoves = getLegalMoves(playerBits, aiBits)
         thinkingRef.current = false
         if (playerMoves.length === 0) {
@@ -129,8 +78,8 @@ export function useAIGame() {
       }
 
       const { myBits: newAi, opBits: newPlayer } = makeMove(aiBits, playerBits, best.position)
-      const newBlack = newPlayer // player is black
-      const newWhite = newAi   // AI is white
+      const newBlack = prev.playerIsBlack ? newPlayer : newAi
+      const newWhite = prev.playerIsBlack ? newAi : newPlayer
       const newBlackCount = popcount(newBlack)
       const newWhiteCount = popcount(newWhite)
 
@@ -168,6 +117,80 @@ export function useAIGame() {
       })
     }, 100) // Small delay to show thinking state
   }, [])
+
+  const playerMove = useCallback((pos: number) => {
+    const prev = stateRef.current
+    if (prev.gameStatus !== 'playing') return
+    if (thinkingRef.current) return
+
+    // Player is always black (playerIsBlack = true)
+    const myBits = prev.playerIsBlack ? prev.blackBits : prev.whiteBits
+    const opBits = prev.playerIsBlack ? prev.whiteBits : prev.blackBits
+    const moves = getLegalMoves(myBits, opBits)
+    if (!moves.includes(pos)) return
+
+    const { myBits: newMy, opBits: newOp } = makeMove(myBits, opBits, pos)
+    const newBlack = prev.playerIsBlack ? newMy : newOp
+    const newWhite = prev.playerIsBlack ? newOp : newMy
+    const newBlackCount = popcount(newBlack)
+    const newWhiteCount = popcount(newWhite)
+
+    const aiMy = !prev.playerIsBlack ? newBlack : newWhite
+    const aiOp = prev.playerIsBlack ? newBlack : newWhite
+    const aiMoves = getLegalMoves(aiMy, aiOp)
+    const playerMovesAfterAi = getLegalMoves(aiOp, aiMy)
+
+    if (aiMoves.length === 0 && playerMovesAfterAi.length === 0) {
+      setState({
+        ...prev,
+        blackBits: newBlack,
+        whiteBits: newWhite,
+        moveHistory: [...prev.moveHistory, pos],
+        legalMoves: [],
+        gameStatus: 'gameover',
+        result: getResult(newBlack, newWhite),
+        playerCount: prev.playerIsBlack ? newBlackCount : newWhiteCount,
+        aiCount: prev.playerIsBlack ? newWhiteCount : newBlackCount,
+      })
+      return
+    }
+
+    thinkingRef.current = true
+    setState({
+      ...prev,
+      blackBits: newBlack,
+      whiteBits: newWhite,
+      moveHistory: [...prev.moveHistory, pos],
+      legalMoves: [],
+      gameStatus: 'thinking',
+      playerCount: prev.playerIsBlack ? newBlackCount : newWhiteCount,
+      aiCount: prev.playerIsBlack ? newWhiteCount : newBlackCount,
+    })
+    runAIMove()
+  }, [runAIMove])
+
+  // Auto-pass: Othello passes the turn to the opponent when a player has no
+  // legal moves. When it is the player's turn and they have none, flip the
+  // turn to the AI (runAIMove). If the AI also has no moves, the game is over.
+  useEffect(() => {
+    const s = stateRef.current
+    if (s.gameStatus !== 'playing') return
+    if (thinkingRef.current) return
+
+    const myBits = s.playerIsBlack ? s.blackBits : s.whiteBits
+    const opBits = s.playerIsBlack ? s.whiteBits : s.blackBits
+    if (getLegalMoves(myBits, opBits).length > 0) return
+
+    if (getLegalMoves(opBits, myBits).length === 0) {
+      const r = getResult(s.blackBits, s.whiteBits)
+      setState({ ...s, gameStatus: 'gameover', result: r, legalMoves: [] })
+      return
+    }
+
+    thinkingRef.current = true
+    setState({ ...s, gameStatus: 'thinking', legalMoves: [] })
+    runAIMove()
+  }, [state, runAIMove])
 
   const setDifficulty = useCallback((d: Difficulty) => {
     setState(prev => ({ ...prev, difficulty: d }))

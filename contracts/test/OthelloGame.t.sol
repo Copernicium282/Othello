@@ -178,7 +178,7 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         assertEq(elo.getELO(alice), 1200e18, "ELO gate should suppress recordResult");
     }
 
-    // Full game lifecycle: createGame → acceptGame → makeMove → _settle
+    // Full game lifecycle: createGame -> acceptGame -> makeMove -> _settle
     // Tests the complete public-API flow. Uses seedBoard to jump to a near-end
     // position for settlement, but createGame/acceptGame/makeMove are real.
     function test_5_4_FullGameLifecycle() public {
@@ -229,7 +229,7 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         assertEq(bb2, uint64(0x0000000818080000), "black after move 19: {19,27,28,35}");
         assertEq(wb2, uint64(0x0000001000000000), "white after move 19: {36}");
 
-        // Step 4: Seed near-end position → play final move → auto-settle
+        // Step 4: Seed near-end position -> play final move -> auto-settle
         // Board: 62 black + 1 white, bit0 empty and legal for black
         harness.seedBoard(0, 0xFFFFFFFFFFFFFFFC, 0x2);
         harness.seedStake(0, alice, 100e18, bob, 100e18);
@@ -237,7 +237,7 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         uint256 a1 = yyg.balanceOf(alice);
         uint256 b1 = yyg.balanceOf(bob);
 
-        // Alice (black) plays pos 0 → flips white@1 → board full → _settle fires
+        // Alice (black) plays pos 0 -> flips white@1 -> board full -> _settle fires
         vm.prank(alice);
         harness.makeMove(0, 0);
 
@@ -354,6 +354,90 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
     // recordResult reverted EloDiffTooLarge, rolling back payouts and stranding
     // stakes forever with status ACTIVE. Now the ELO recording is skipped but the
     // neutral payout still goes through.
+    // PASS path (a): opponent (white) has no legal moves after black moves,
+    // but black still has moves -> makeMove flips the turn BACK to black
+    // (implicit pass; the white player never gets a turn).
+    // Board: black owns everything except {0,9,17,24}; white owns {1,9,17};
+    // empty {0,24}. Black plays 0 (flips white@1) -> white boxed out (no moves),
+    // black still holds position 24 -> blackToMove must be flipped back to true.
+    function test_Pass_Single_PlayerBoxedOut_TurnFlipsBack() public {
+        uint64 black = 0xFFFFFFFEFEFDFDFC; // all but bits 0,9,17,24
+        uint64 white = 0x0000000000020202; // bits 1,9,17
+        harness.seedBoard(0, black, white);
+        harness.seedStake(0, alice, 100e18, bob, 120e18);
+        _setElo(0, alice, 1200e18);
+        _setElo(0, bob, 1200e18);
+
+        // Black (alice) plays 0: flips white@1. White is now boxed out.
+        vm.prank(alice);
+        harness.makeMove(0, 0);
+
+        (,, Status st,) = harness.record(0);
+        assertTrue(st == Status.ACTIVE, "single pass must NOT settle the game");
+        (,,, , Status stChk, bool blackToMove,) = harness.games(0);
+        assertTrue(stChk == Status.ACTIVE && blackToMove, "pass should flip the turn back to black");
+
+        // The pass-back means it is still black's turn: black can move again at 24.
+        vm.prank(alice);
+        harness.makeMove(0, 24); // must not revert; fills the board -> settles
+        (,, Status st2, address winner) = harness.record(0);
+        assertTrue(st2 == Status.FINISHED, "game settles after the second black move");
+        assertEq(winner, alice, "black/Challenger wins the board");
+    }
+
+    // PASS path (b): after black moves, white has no moves AND black has no
+    // moves either -> double pass -> makeMove auto-settles and pays out.
+    // Board: black owns everything except {0,1,2,60}; white owns {1,2}; empty
+    // {0,60}. Black plays 0 (flips white@1,2) -> white = 0 pieces and black has
+    // no white left to flank -> both boxed out -> _settle fires.
+    function test_Pass_Double_SettlesAndPaysOut() public {
+        uint64 black = 0xEFFFFFFFFFFFFFF8; // all but bits 0,1,2,60
+        uint64 white = 0x0000000000000006; // bits 1,2
+        harness.seedBoard(0, black, white);
+        harness.seedStake(0, alice, 100e18, bob, 120e18);
+        _setElo(0, alice, 1200e18);
+        _setElo(0, bob, 1200e18); // diff 0 -> rated rules
+
+        uint256 a0 = yyg.balanceOf(alice);
+        uint256 b0 = yyg.balanceOf(bob);
+        uint256 t0 = yyg.balanceOf(address(treasuryContract));
+
+        vm.prank(alice);
+        harness.makeMove(0, 0);
+
+        (,, Status st, address winner) = harness.record(0);
+        assertTrue(st == Status.FINISHED, "double pass should auto-settle");
+        assertEq(winner, alice, "black/Challenger wins 63-0");
+
+        // Rated black-win payout: winner takes 96% of the COMBINED pot.
+        uint256 combined = 100e18 + 120e18;
+        assertEq(yyg.balanceOf(alice), a0 + combined * 96 / 100, "winner takes 96% of pot");
+        assertEq(yyg.balanceOf(bob), b0, "loser gets nothing");
+        assertEq(yyg.balanceOf(address(treasuryContract)), t0 + combined * 4 / 100, "treasury got 4%");
+    }
+
+    // PASS path (c): makeMove is only valid for the player whose turn it is.
+    function test_MakeMove_WrongTurn_Reverts() public {
+        harness.seedBoard(0, INIT_BLACK_BITBOARD, INIT_WHITE_BITBOARD);
+        harness.seedStake(0, alice, 100e18, bob, 120e18);
+
+        // blackToMove = true -> only alice (black/p1) may move.
+        vm.prank(bob);
+        vm.expectRevert(OthelloGame.NotYourTurn.selector);
+        harness.makeMove(0, 19);
+
+        // alice moves 19 (flips white@27) -> turn flips to white (bob).
+        vm.prank(alice);
+        harness.makeMove(0, 19);
+        (,,, , Status stAfter, bool blackToMove,) = harness.games(0);
+        assertTrue(stAfter == Status.ACTIVE && !blackToMove, "turn should now be white");
+
+        // Now alice may not move again.
+        vm.prank(alice);
+        vm.expectRevert(OthelloGame.NotYourTurn.selector);
+        harness.makeMove(0, 26);
+    }
+
     function test_Settle_ExtremeEloDiff_PaysOutNeutrally() public {
         harness.seedBoard(0, 0x7, 0x8); // 3 black > 1 white -> black wins on board
         harness.seedStake(0, alice, 100e18, bob, 120e18);

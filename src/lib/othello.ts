@@ -33,7 +33,7 @@ function flipsInDirection(
   return 0n
 }
 
-function getFlips(myBits: bigint, opBits: bigint, pos: number): bigint {
+export function getFlips(myBits: bigint, opBits: bigint, pos: number): bigint {
   let flipMask = 0n
   flipMask |= flipsInDirection(myBits, opBits, pos, 8, NO_MASK)    // S
   flipMask |= flipsInDirection(myBits, opBits, pos, -8, NO_MASK)   // N

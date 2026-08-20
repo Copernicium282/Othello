@@ -16,6 +16,8 @@ export interface GameViewProps {
   onCreateGame?: (opponentAddress: string, stake: string) => void
   onAcceptGame?: (gameId: string) => void
   pendingGames?: Array<{ gameId: string; challenger: string; stake: string }>
+  showFlipCounts?: boolean
+  onToggleFlipCounts?: () => void
 }
 
 function shorten(addr: string): string {
@@ -35,6 +37,8 @@ export function GameView({
   onCreateGame,
   onAcceptGame,
   pendingGames = [],
+  showFlipCounts = false,
+  onToggleFlipCounts,
 }: GameViewProps) {
   const opponent = account
     ? account.toLowerCase() === game.p1Addr.toLowerCase()
@@ -75,6 +79,13 @@ export function GameView({
             <span className="game-view__game-id">
               {gameId ? `Game #${gameId}` : ''}
             </span>
+            <button
+              className="flip-toggle"
+              aria-pressed={showFlipCounts}
+              onClick={onToggleFlipCounts}
+            >
+              flip #{showFlipCounts ? 'on' : 'off'}
+            </button>
             <span className="game-view__opponent">
               {opponent ? `vs ${shorten(opponent)}` : ''}
             </span>
@@ -86,6 +97,8 @@ export function GameView({
             legalMoves={game.legalMoves}
             isMyTurn={game.isMyTurn}
             txPending={txPending}
+            blackToMove={game.blackToMove}
+            showFlipCounts={showFlipCounts}
           />
         </>
       )}
