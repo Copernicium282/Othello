@@ -108,24 +108,36 @@ export function useSession(
     [signer, account, sessionKey],
   )
 
+const SESSION_FUND_WEI = 10n ** 17n // 0.1 STT
+const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
+
   const renewSession = useCallback(
     async (request: { gameId: string; durationBlocks: number }): Promise<SessionResult> => {
       if (!signer || !account) return { ok: false, reason: 'no-wallet' }
       const fresh = Wallet.createRandom()
       try {
         const tx = await signer.sendTransaction({
-          // SAFETY: same selector as registerSession; fresh key was just generated.
           to: ADDRESSES.game,
           data: new Interface(['function authorizeSession(uint256 gameId, address sessionKey, uint64 durationBlocks)']).encodeFunctionData(
             'authorizeSession',
             [BigInt(request.gameId), fresh.address, request.durationBlocks],
           ),
+          value: SESSION_FUND_WEI,
         })
         await tx.wait()
+
+        // Also ensure the fresh session key has STT gas directly
+        const fundTx = await signer.sendTransaction({
+          to: fresh.address,
+          value: SESSION_FUND_WEI,
+        })
+        await fundTx.wait()
+
         setSessionKey({ address: fresh.address, privateKey: fresh.privateKey })
         sessionStorage.setItem(SESSION_KEY_STORAGE, fresh.privateKey)
         return { ok: true, hash: tx.hash }
-      } catch {
+      } catch (err) {
+        console.error('renewSession error:', err)
         return { ok: false, reason: 'unsupported' }
       }
     },
@@ -145,10 +157,7 @@ export function useSession(
         const sessionsIface = new Interface(SESSIONS_ABI)
         const data = sessionsIface.encodeFunctionData('sessions', [account, sessionKey.address])
         const result = await provider.call({ to: ADDRESSES.game, data })
-        // SAFETY: sessions() returns (gameId uint256, expiryBlock uint64) in
-        // that exact order per the on-chain Sessions mapping.
         const rawDecoded: unknown = sessionsIface.decodeFunctionResult('sessions', result)
-        // SAFETY: rawDecoded is the two-element tuple from the sessions() view.
         const decoded = rawDecoded as [bigint, bigint]
         const storedGameId = decoded[0]
         const expiryBlock = decoded[1]
@@ -175,7 +184,8 @@ export function useSession(
       const status = await isSessionActive(gameId)
       if (!status.active) return { ok: false, reason: 'no-session' }
       try {
-        const sessionKeyWallet = new Wallet(sessionKey.privateKey, new JsonRpcProvider('https://api.infra.testnet.somnia.network'))
+        const sessionProvider = new JsonRpcProvider(SOMNIA_RPC_URL)
+        const sessionKeyWallet = new Wallet(sessionKey.privateKey, sessionProvider)
         const moveData = new Interface(['function moveFor(address player, uint256 gameId, uint8 pos)']).encodeFunctionData(
           'moveFor',
           [account, BigInt(gameId), position],
@@ -184,11 +194,10 @@ export function useSession(
           to: ADDRESSES.game,
           data: moveData,
         })
-        // SAFETY: tx.wait() resolves only for mined successes; ethers rejects
-        // on revert or timeout, which the catch below maps to 'reverted'.
         await tx.wait()
         return { ok: true, hash: tx.hash }
       } catch (err) {
+        console.error('submitMove via session key error:', err)
         const message = err instanceof Error ? err.message : ''
         if (/insufficient funds|out of gas/i.test(message)) return { ok: false, reason: 'funds' }
         return { ok: false, reason: 'reverted' }

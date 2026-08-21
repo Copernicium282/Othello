@@ -132,31 +132,34 @@ export function GameView({
   const handleCellClick = async (position: number) => {
     if (!contracts || !gameId || !account) return
     onMovePending(true)
-    let sessionSent = false
+    let moveSucceeded = false
     try {
       const status = await session.isSessionActive(gameId)
       setSessionChip(chipFromStatus(status, inThisGame))
+
       if (status.active) {
-        const res = await session.submitMove(gameId, position)
-        if (res.ok) {
-          sessionSent = true
-          onMovePending(false)
-        } else if (res.reason === 'reverted') {
-          sessionSent = true
-          onMovePending(false)
-          toast('error', 'Move failed: transaction reverted')
-        } else if (res.reason === 'funds') {
-          toast('info', 'Session key out of gas, using direct signing')
+        try {
+          const res = await session.submitMove(gameId, position)
+          if (res.ok) {
+            moveSucceeded = true
+          } else {
+            console.warn('Session move returned non-ok, falling back to direct sign:', res.reason)
+          }
+        } catch (sessionErr) {
+          console.warn('Session move threw exception, falling back to direct sign:', sessionErr)
         }
       }
-      if (!sessionSent) {
+
+      if (!moveSucceeded) {
         const tx = await contracts.game.makeMove(gameId, position)
         await tx.wait()
+        moveSucceeded = true
       }
-    } catch {
-      toast('error', 'Move failed: invalid or not your turn')
+    } catch (err) {
+      console.error('handleCellClick error:', err)
+      toast('error', 'Move failed: invalid move or not your turn')
     } finally {
-      if (!sessionSent) onMovePending(false)
+      onMovePending(false)
     }
   }
 
