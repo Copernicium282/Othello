@@ -1,6 +1,5 @@
 import { Signature } from 'ethers'
 import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
-import { BUNDLER_URL } from './thirdweb'
 
 const SOMNIA_CHAIN_ID = 50312
 
@@ -70,21 +69,21 @@ export interface CallsStatus {
   }>
 }
 
-/** Submit a batch via wallet_sendCalls (EIP-5792) with thirdweb paymaster. */
+/** Submit a batch via wallet_sendCalls (EIP-5792); gas is paid by the EOA. */
 export async function sendCallsBatch(
   provider: BrowserProvider,
   account: string,
   calls: BatchCall[],
 ): Promise<string> {
-  // SAFETY: wallet_sendCalls (EIP-5792) returns the bundle id string; the
-  // paymasterService capability routes gas sponsorship through thirdweb.
+  // SAFETY: wallet_sendCalls (EIP-5792) returns the bundle id string. No
+  // paymasterService capability: gas comes from the EOA balance, and an
+  // unsupported sponsor URL makes wallets reject the whole bundle.
   const bundleId = (await provider.send('wallet_sendCalls', [
     {
       version: '1.0',
       chainId: `0x${SOMNIA_CHAIN_ID.toString(16)}`,
       from: account,
       calls,
-      capabilities: { paymasterService: { url: BUNDLER_URL } },
     },
   ])) as string
   return bundleId

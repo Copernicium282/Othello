@@ -127,6 +127,13 @@ function PageContent({
             setTxPending(true)
             try {
               const stakeWei = parseUnits(stake, 18)
+              // SAFETY: yygBalance is produced by formatUnits(value, 18), so
+              // parsing it back with the same decimals cannot throw.
+              if (parseUnits(yygBalance, 18) < stakeWei) {
+                toast('error', 'Not enough YYG for that stake. Wrap STT into YYG first.')
+                setTxPending(false)
+                return
+              }
               let parsedGameId: string | null = null
               let newGameId: string | null = null
               try {
@@ -178,8 +185,10 @@ function PageContent({
               }
               setGameId(newGameId)
               toast('success', 'Game created! Game #' + newGameId)
-            } catch {
-              toast('error', 'Failed to create game')
+            } catch (err) {
+              console.error('createGame failed:', err)
+              const reason = err instanceof Error ? err.message : String(err)
+              toast('error', ('Failed to create game: ' + reason).slice(0, 120))
             } finally {
               setTxPending(false)
             }
@@ -191,6 +200,13 @@ function PageContent({
             try {
               const gameData = await contracts.game.games(id)
               const stakeWei = gameData[2][3]
+              // SAFETY: yygBalance is produced by formatUnits(value, 18), so
+              // parsing it back with the same decimals cannot throw.
+              if (parseUnits(yygBalance, 18) < stakeWei) {
+                toast('error', 'Not enough YYG to match this stake. Wrap STT into YYG first.')
+                setTxPending(false)
+                return
+              }
               try {
                 const permit = await signPermit(contracts.yyg, signer, account, ADDRESSES.game, stakeWei)
                 const permitData = contracts.yyg.interface.encodeFunctionData('permit', [
@@ -229,8 +245,10 @@ function PageContent({
                 toast('info', 'Session setup failed, moves will use direct signing')
               }
               toast('success', 'Game accepted!')
-            } catch {
-              toast('error', 'Failed to accept game')
+            } catch (err) {
+              console.error('acceptGame failed:', err)
+              const reason = err instanceof Error ? err.message : String(err)
+              toast('error', ('Failed to accept game: ' + reason).slice(0, 120))
               setGameId(null)
             } finally {
               setTxPending(false)
