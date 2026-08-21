@@ -103,8 +103,9 @@ export function HowToPlay({
             <strong>Create a game.</strong>{' '}
             <span>
               Pick an opponent (any wallet address) and a stake in YYG. Your wallet
-              approves the stake and pays it in a single batched transaction, and a
-              session key is created automatically so your moves are cheap and instant.
+              creates the game and authorizes a session key in a single transaction
+              (the session key is funded with 0.1 STT so your moves need no
+              confirmations).
             </span>
           </div>
           <div className="howtoplay-step__actions">

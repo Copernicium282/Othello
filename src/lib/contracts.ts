@@ -3,8 +3,7 @@ export const ADDRESSES = {
   yyg: '0x86E9D0284Af16761AD1C3Ab0dbC5ddA6877eA51E',
   elo: '0x423FBEf43A8de868758753f3E04c2733D3466099',
   treasury: '0x713915Cc2ddB0E45622a7FC35E2A8c364784092A',
-  game: '0xfE8366E6Dd3b3D47eF899fd63c0b979d2b80A7f2',
-  sessionDelegate: '0x1438bd445364d04354e0d831e29702d8c6eea534',
+  game: '0xf8B227247e432709438619a70Bf60710065239f9',
 } as const
 
 // --- Human-readable ABIs ---
@@ -15,20 +14,26 @@ export const YYG_ABI = [
   'function decimals() view returns (uint8)',
   'function allowance(address owner, address spender) view returns (uint256)',
   'function approve(address spender, uint256 value) returns (bool)',
-  'function nonces(address) view returns (uint256)',
-  'function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)',
   'function wrap() payable',
   'function unwrap(uint256 amount)',
 ] as const
 
 export const GAME_ABI = [
   'function createGame(address opponent, uint256 challengerStakeAmount)',
+  'function createGameWithSession(address opponent, uint256 challengerStakeAmount, address sessionKey, uint64 durationBlocks) payable',
   'function cancelGame(uint256 gameId)',
   'function acceptGame(uint256 gameId, uint256 opponentStakeAmount)',
+  'function acceptGameWithSession(uint256 gameId, uint256 opponentStakeAmount, address sessionKey, uint64 durationBlocks) payable',
   'function makeMove(uint256 gameId, uint8 pos)',
+  'function moveFor(address player, uint256 gameId, uint8 pos)',
+  'function authorizeSession(uint256 gameId, address sessionKey, uint64 durationBlocks)',
+  'function revokeSessionKey(address sessionKey)',
+  'function sessions(address player, address sessionKey) view returns (uint256 gameId, uint64 expiryBlock)',
   'function games(uint256 gameId) view returns (uint64 blackBits, uint64 whiteBits, tuple(address playerAddr, uint64 dailyCount, uint256 lastPlayed, uint256 stake) p1, tuple(address playerAddr, uint64 dailyCount, uint256 lastPlayed, uint256 stake) p2, uint8 status, bool blackToMove, uint256 lastMoveBlock)',
   'function nextGameId() view returns (uint256)',
   'event GameCreated(uint256 indexed gameId, address indexed challenger, uint256 stake)',
+  'event SessionAuthorized(address indexed player, uint256 indexed gameId, address indexed key, uint64 expiryBlock)',
+  'event SessionRevoked(address indexed player, address indexed key)',
 ] as const
 
 export const ELO_ABI = [

@@ -11,11 +11,10 @@ Fully on-chain Othello (Reversi) with wagering, ELO ratings, and seasonal treasu
 5. Play Othello, each move is a confirmed on-chain tx
 6. Winner takes 96% of the combined pot, 4% goes to the seasonal treasury
 
-**Gasless sessions (EIP-7702):** accepting a game also sets up a browser-side session key
-(one extra confirmation), so every move afterwards needs zero MetaMask confirmations.
-Game entry uses EIP-5792 batched transactions (permit + game call) through a thirdweb
-paymaster, so no gas is needed on the account for create/accept either. Sessions are
-revoked when the game ends and can be renewed when they expire.
+**Sessions (popup-free moves):** creating or accepting a game also authorizes a
+browser-side session key and funds it with 0.1 STT for gas, all in the same
+transaction. Every move afterwards is signed by the session key with zero MetaMask
+confirmations; the session is renewed with one click when it expires.
 
 No wallet? The **AI tab** lets you play locally against a built-in AI (alpha-beta search, 4 difficulty levels), no chain calls required.
 
@@ -41,9 +40,7 @@ cp -r .specs/anti-slop/src tools/oxlint/anti-slop
 npm install -D @oxlint/plugins
 ```
 
-Set `VITE_THIRDWEB_CLIENT_ID` in `.env` (see `.env.example`) for the thirdweb
-paymaster/bundler; thirdweb allowed domains must include `localhost:5173`,
-`localhost:4173`, and `*.vercel.app`.
+Set `VITE_THIRDWEB_CLIENT_ID` in `.env` (see `.env.example`); Vercel deployments need it as an environment variable. Thirdweb allowed domains must include `localhost:5173`, `localhost:4173`, and `*.vercel.app`.
 
 ## Contracts (Somnia Shannon Testnet)
 
@@ -52,15 +49,14 @@ paymaster/bundler; thirdweb allowed domains must include `localhost:5173`,
 | YinYang (YYG) | `0x86E9D0284Af16761AD1C3Ab0dbC5ddA6877eA51E` | [address](https://shannon-explorer.somnia.network/address/0x86E9D0284Af16761AD1C3Ab0dbC5ddA6877eA51E) |
 | OthelloELO | `0x423FBEf43A8de868758753f3E04c2733D3466099` | [address](https://shannon-explorer.somnia.network/address/0x423FBEf43A8de868758753f3E04c2733D3466099) |
 | OthelloTreasury | `0x713915Cc2ddB0E45622a7FC35E2A8c364784092A` | [address](https://shannon-explorer.somnia.network/address/0x713915Cc2ddB0E45622a7FC35E2A8c364784092A) |
-| OthelloGame | `0xfE8366E6Dd3b3D47eF899fd63c0b979d2b80A7f2` | [address](https://shannon-explorer.somnia.network/address/0xfE8366E6Dd3b3D47eF899fd63c0b979d2b80A7f2) |
-| OthelloSessionDelegate | `0x1438bd445364d04354e0d831e29702d8c6eea534` | [address](https://shannon-explorer.somnia.network/address/0x1438bd445364d04354e0d831e29702d8c6eea534) |
+| OthelloGame | `0xf8B227247e432709438619a70Bf60710065239f9` | [address](https://shannon-explorer.somnia.network/address/0xf8B227247e432709438619a70Bf60710065239f9) |
 
 ## Stack
 
 - Solidity ^0.8.27 + Foundry
 - React 19 + Vite 8 + TypeScript 6
 - ethers.js v6
-- thirdweb v5 (EIP-5792 sendCalls, EIP-7702 signAuthorization, paymaster)
+- thirdweb v5 (env-gated client; chain config)
 - PRBMath SD59x18 (fixed-point ELO math)
 - OpenZeppelin ERC-20 + Ownable
 - oxlint
@@ -76,9 +72,8 @@ paymaster/bundler; thirdweb allowed domains must include `localhost:5173`,
 
 ```
 React Frontend -> ethers.js -> Somnia Shannon
-  +-- YinYang.sol (ERC-20 wrap/unwrap + ERC-2612 permit)
-  +-- OthelloGame.sol (bitboard game logic + escrow)
+  +-- YinYang.sol (ERC-20 wrap/unwrap)
+  +-- OthelloGame.sol (bitboard game logic + escrow + contract-level sessions)
   +-- OthelloELO.sol (fixed-point ELO registry)
   +-- OthelloTreasury.sol (fee accumulator + seasonal payout)
-  +-- OthelloSessionDelegate.sol (EIP-7702 session key for gasless moves)
 ```

@@ -18,8 +18,14 @@ contract OthelloGame is Ownable {
     error FailedSendEth();
     error InvalidOpponent();
     error TimeoutNotReached();
+    error ZeroAddress();
+    error NotAuthorizedSession();
+    error SessionExpired();
+    error SessionWrongGame();
 
     event GameCreated(uint256 indexed gameId, address indexed challenger, uint256 stake);
+    event SessionAuthorized(address indexed player, uint256 indexed gameId, address indexed key, uint64 expiryBlock);
+    event SessionRevoked(address indexed player, address indexed key);
 
     struct Player {
         address playerAddr;
@@ -119,6 +125,38 @@ contract OthelloGame is Ownable {
     mapping(uint256 gameId => Game) public games;
     uint256 public nextGameId;
 
+    // Session keys: a player authorizes a burner wallet to move on their behalf
+    // in one specific game until an expiry block. Moves arrive via moveFor.
+    struct SessionInfo {
+        uint256 gameId;
+        uint64 expiryBlock;
+    }
+    mapping(address player => mapping(address key => SessionInfo)) public sessions;
+
+    function _authorizeSession(address player, uint256 gameId, address key, uint64 durationBlocks) internal {
+        if (key == address(0)) revert ZeroAddress();
+        Game storage game = games[gameId];
+        // PENDING is allowed: createGameWithSession authorizes before acceptance;
+        // moving is still gated on ACTIVE inside _makeMoveAs.
+        if (player != game.p1.playerAddr && player != game.p2.playerAddr) revert WrongOpponent();
+        uint64 expiry;
+        unchecked {
+            // SAFETY: block numbers are far below 2^64; sum cannot overflow.
+            expiry = uint64(block.number) + durationBlocks;
+        }
+        sessions[player][key] = SessionInfo({gameId: gameId, expiryBlock: expiry});
+        emit SessionAuthorized(player, gameId, key, expiry);
+    }
+
+    function authorizeSession(uint256 gameId, address key, uint64 durationBlocks) external {
+        _authorizeSession(msg.sender, gameId, key, durationBlocks);
+    }
+
+    function revokeSessionKey(address key) external {
+        delete sessions[msg.sender][key];
+        emit SessionRevoked(msg.sender, key);
+    }
+
     uint256 dayIndex;
     uint64 constant DAILY_CAP = 20;
     uint256 constant MIN_STAKE = 10e18;
@@ -174,6 +212,39 @@ contract OthelloGame is Ownable {
         }
 
         dailyGamesCap[dayIndex][msg.sender].lastPlayed = block.timestamp;
+    }
+
+    /// @notice Creates a game, authorizes a session key for it and forwards
+    /// msg.value to that key for move gas, all in the caller's single tx.
+    function createGameWithSession(
+        address opponent,
+        uint256 challengerStakeAmount,
+        address sessionKey,
+        uint64 durationBlocks
+    ) external payable {
+        uint256 gameId = nextGameId;
+        createGame(opponent, challengerStakeAmount);
+        _authorizeSession(msg.sender, gameId, sessionKey, durationBlocks);
+        if (msg.value > 0) {
+            (bool ok,) = sessionKey.call{value: msg.value}("");
+            if (!ok) revert FailedSendEth();
+        }
+    }
+
+    /// @notice Accepts a game, authorizes a session key for it and forwards
+    /// msg.value to that key for move gas, all in the caller's single tx.
+    function acceptGameWithSession(
+        uint256 gameId,
+        uint256 opponentStakeAmount,
+        address sessionKey,
+        uint64 durationBlocks
+    ) external payable {
+        acceptGame(gameId, opponentStakeAmount);
+        _authorizeSession(msg.sender, gameId, sessionKey, durationBlocks);
+        if (msg.value > 0) {
+            (bool ok,) = sessionKey.call{value: msg.value}("");
+            if (!ok) revert FailedSendEth();
+        }
     }
 
     function cancelGame(uint256 gameId) public {
@@ -249,6 +320,20 @@ contract OthelloGame is Ownable {
     }
 
     function makeMove(uint256 gameId, uint8 pos) public {
+        _makeMoveAs(msg.sender, gameId, pos);
+    }
+
+    /// @notice Moves on behalf of player; msg.sender must hold a live session
+    /// for that exact game.
+    function moveFor(address player, uint256 gameId, uint8 pos) external {
+        SessionInfo memory info = sessions[player][msg.sender];
+        if (info.expiryBlock == 0) revert NotAuthorizedSession();
+        if (uint64(block.number) > info.expiryBlock) revert SessionExpired();
+        if (info.gameId != gameId) revert SessionWrongGame();
+        _makeMoveAs(player, gameId, pos);
+    }
+
+    function _makeMoveAs(address player, uint256 gameId, uint8 pos) internal {
         Game storage game = games[gameId];
         if (game.status != Status.ACTIVE) revert GameNotActive();
 
@@ -256,12 +341,12 @@ contract OthelloGame is Ownable {
         uint64 opBits;
 
         if (game.blackToMove == true) {
-            if (msg.sender != game.p1.playerAddr) revert NotYourTurn();
+            if (player != game.p1.playerAddr) revert NotYourTurn();
 
             myBits = game.blackBits;
             opBits = game.whiteBits;
         } else {
-            if (msg.sender != game.p2.playerAddr) revert NotYourTurn();
+            if (player != game.p2.playerAddr) revert NotYourTurn();
 
             myBits = game.whiteBits;
             opBits = game.blackBits;

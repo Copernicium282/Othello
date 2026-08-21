@@ -464,4 +464,133 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         assertEq(elo.getELO(alice), 2500e18, "ELO skipped for extreme diff");
         assertEq(elo.getELO(bob), 1200e18);
     }
+
+    // ---- Session keys ----
+
+    // Helper: fund both players, approve harness, create and accept game 0.
+    function _startActiveGame() internal returns (address key) {
+        vm.startPrank(alice);
+        yyg.wrap{value: 2 ether}();
+        yyg.approve(address(harness), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        vm.deal(bob, 10 ether);
+        yyg.wrap{value: 2 ether}();
+        yyg.approve(address(harness), type(uint256).max);
+        vm.stopPrank();
+
+        _setElo(0, alice, 1200e18);
+        _setElo(0, bob, 1200e18);
+
+        vm.prank(alice);
+        harness.createGame(bob, 100e18);
+        vm.prank(bob);
+        harness.acceptGame(0, 100e18);
+
+        key = makeAddr("sessionKey");
+    }
+
+    function test_Session_AuthorizeAndMoveFor() public {
+        address key = _startActiveGame();
+
+        vm.prank(alice);
+        harness.authorizeSession(0, key, 1000);
+
+        // Key moves for alice (black) at pos 19; board must update identically
+        // to a direct makeMove by alice.
+        vm.prank(key);
+        harness.moveFor(alice, 0, 19);
+
+        (uint64 bb, uint64 wb,,) = harness.record(0);
+        assertEq(bb, uint64(0x0000000818080000), "black after session move 19: {19,27,28,35}");
+        assertEq(wb, uint64(0x0000001000000000), "white after session move 19: {36}");
+    }
+
+    function test_Session_MoveForRevertsNotAuthorized() public {
+        address key = _startActiveGame();
+
+        vm.prank(key);
+        vm.expectRevert(NotAuthorizedSession.selector);
+        harness.moveFor(alice, 0, 19);
+    }
+
+    function test_Session_MoveForRevertsExpired() public {
+        address key = _startActiveGame();
+
+        vm.prank(alice);
+        harness.authorizeSession(0, key, 10);
+
+        vm.roll(block.number + 11);
+        vm.prank(key);
+        vm.expectRevert(SessionExpired.selector);
+        harness.moveFor(alice, 0, 19);
+    }
+
+    function test_Session_MoveForRevertsWrongGame() public {
+        address key = _startActiveGame();
+
+        vm.prank(alice);
+        harness.authorizeSession(0, key, 1000);
+
+        vm.prank(key);
+        vm.expectRevert(SessionWrongGame.selector);
+        harness.moveFor(alice, 1, 19);
+    }
+
+    function test_Session_RevokeStopsMoves() public {
+        address key = _startActiveGame();
+
+        vm.prank(alice);
+        harness.authorizeSession(0, key, 1000);
+        vm.prank(alice);
+        harness.revokeSessionKey(key);
+
+        vm.prank(key);
+        vm.expectRevert(NotAuthorizedSession.selector);
+        harness.moveFor(alice, 0, 19);
+    }
+
+    function test_Session_CreateGameWithSessionFundsKey() public {
+        address key = makeAddr("sessionKey");
+        vm.deal(alice, 10 ether);
+
+        vm.startPrank(alice);
+        yyg.wrap{value: 2 ether}();
+        yyg.approve(address(harness), type(uint256).max);
+        vm.stopPrank();
+
+        _setElo(0, alice, 1200e18);
+        _setElo(0, bob, 1200e18);
+
+        uint256 fundAmount = 0.01 ether;
+        vm.prank(alice);
+        harness.createGameWithSession{value: fundAmount}(bob, 100e18, key, 1000);
+
+        assertEq(key.balance, fundAmount, "session key funded on create");
+        (uint256 gameId, uint64 expiry) = harness.sessions(alice, key);
+        assertEq(gameId, 0, "session bound to new game");
+        assertGt(expiry, block.number, "session expiry in the future");
+
+        // Opponent accepts with his own session and funds it too.
+        address bobKey = makeAddr("bobKey");
+        vm.startPrank(bob);
+        vm.deal(bob, 10 ether);
+        yyg.wrap{value: 2 ether}();
+        yyg.approve(address(harness), type(uint256).max);
+        acceptGameWithSessionHelper(bobKey, fundAmount);
+        vm.stopPrank();
+
+        assertEq(bobKey.balance, fundAmount, "session key funded on accept");
+
+        // Both session keys can move: alice (black) then bob (white).
+        vm.prank(key);
+        harness.moveFor(alice, 0, 19);
+        vm.prank(bobKey);
+        harness.moveFor(bob, 0, 34);
+    }
+
+    function acceptGameWithSessionHelper(address key, uint256 value) internal {
+        harness.acceptGameWithSession{value: value}(0, 100e18, key, 1000);
+    }
 }

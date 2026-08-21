@@ -17,5 +17,3 @@ export const somniaShannon = defineChain({
   nativeCurrency: { name: 'STT', symbol: 'STT', decimals: 18 },
   rpc: 'https://api.infra.testnet.somnia.network',
 })
-
-export const BUNDLER_URL = `https://50312.bundler.thirdweb.com/${import.meta.env.VITE_THIRDWEB_CLIENT_ID}`
