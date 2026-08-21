@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react'
-import { formatUnits, formatEther, parseUnits, MaxUint256, EventLog } from 'ethers'
+import { formatUnits, formatEther, parseUnits, MaxUint256 } from 'ethers'
 import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
 import { useWallet } from './hooks/useWallet'
 import { useContracts } from './hooks/useContracts'
@@ -359,32 +359,50 @@ export function App() {
   const fetchLeaderboard = useCallback(async () => {
     if (!contracts) return
     try {
-      // SAFETY: queryFilter returns EventLog[] when given a string filter, per ethers v6.
-      const logs = await contracts.elo.queryFilter('ELOUpdated', 0, 'latest') as EventLog[]
+      const nextId = Number(await contracts.readOnlyGame.nextGameId())
       const playerMap = new Map<string, { wins: number; losses: number; elo: number }>()
 
-      for (const log of logs) {
-        // SAFETY: ELOUpdated emits (address indexed winner, ..., address indexed loser, ...).
-        const winner = log.args.winner as string
-        // SAFETY: loser is the second indexed address in ELOUpdated.
-        const loser = log.args.loser as string
+      // Scan games to find unique players
+      for (let i = 0; i < nextId; i++) {
+        try {
+          const gameData = await contracts.readOnlyGame.games(i)
+          const p1 = gameData[2][0] as string
+          const p2 = gameData[3][0] as string
+          const status = Number(gameData[4])
+          const blackBits = BigInt(gameData[0])
+          const whiteBits = BigInt(gameData[1])
 
-        const winnerEntry = playerMap.get(winner) ?? { wins: 0, losses: 0, elo: 0 }
-        winnerEntry.wins++
-        playerMap.set(winner, winnerEntry)
+          if (p1 && p1 !== '0x0000000000000000000000000000000000000000') {
+            if (!playerMap.has(p1)) playerMap.set(p1, { wins: 0, losses: 0, elo: 1200 })
+          }
+          if (p2 && p2 !== '0x0000000000000000000000000000000000000000') {
+            if (!playerMap.has(p2)) playerMap.set(p2, { wins: 0, losses: 0, elo: 1200 })
+          }
 
-        const loserEntry = playerMap.get(loser) ?? { wins: 0, losses: 0, elo: 0 }
-        loserEntry.losses++
-        playerMap.set(loser, loserEntry)
+          if (status === 2 && (blackBits !== 0n || whiteBits !== 0n)) {
+            // Count finished games
+            const bCount = (blackBits.toString(2).match(/1/g) || []).length
+            const wCount = (whiteBits.toString(2).match(/1/g) || []).length
+            if (bCount > wCount) {
+              if (playerMap.has(p1)) playerMap.get(p1)!.wins++
+              if (playerMap.has(p2)) playerMap.get(p2)!.losses++
+            } else if (wCount > bCount) {
+              if (playerMap.has(p2)) playerMap.get(p2)!.wins++
+              if (playerMap.has(p1)) playerMap.get(p1)!.losses++
+            }
+          }
+        } catch {
+          // ignore single game error
+        }
       }
 
       const playerList: Player[] = []
       for (const [address, stats] of playerMap) {
         try {
-          const eloRaw = await contracts.elo.getELO(address)
+          const eloRaw = await contracts.readOnlyElo.getELO(address)
           stats.elo = Number(formatUnits(eloRaw, 18))
         } catch {
-          stats.elo = 0
+          stats.elo = 1200
         }
         playerList.push({ address, elo: stats.elo, wins: stats.wins, losses: stats.losses })
       }
@@ -413,32 +431,28 @@ export function App() {
   const fetchPendingGames = useCallback(async () => {
     if (!contracts) return
     try {
-      // SAFETY: queryFilter returns EventLog[] when given a string filter, per ethers v6.
-      const logs = await contracts.game.queryFilter('GameCreated', 0, 'latest') as EventLog[]
+      const nextId = Number(await contracts.readOnlyGame.nextGameId())
       const pending: Array<{ gameId: string; challenger: string; stake: string }> = []
-      for (const log of logs) {
-        // SAFETY: GameCreated emits (uint256 indexed gameId, address indexed challenger, uint256 stake).
-        const logGameId = String(log.args.gameId as bigint)
-        // SAFETY: challenger is the indexed address in GameCreated.
-        const challenger = log.args.challenger as string
-        // SAFETY: stake is the third, non-indexed uint256 in GameCreated.
-        const stakeRaw = log.args.stake as bigint
+      const start = Math.max(0, nextId - 50)
+
+      for (let i = start; i < nextId; i++) {
         try {
-          const gameData = await contracts.game.games(logGameId)
+          const gameData = await contracts.readOnlyGame.games(i)
+          // gameData[4] is status: 0 = PENDING, 1 = ACTIVE, 2 = FINISHED
           if (Number(gameData[4]) === 0) {
             pending.push({
-              gameId: logGameId,
-              challenger,
-              stake: formatUnits(stakeRaw, 18),
+              gameId: String(i),
+              challenger: gameData[2][0] as string,
+              stake: formatUnits(gameData[2][3] as bigint, 18),
             })
           }
         } catch {
-          // Game might not exist or be settled
+          // Ignore
         }
       }
-      setPendingGames(pending.slice(-10))
-    } catch {
-      // Failed to fetch pending games
+      setPendingGames(pending.reverse().slice(0, 10))
+    } catch (err) {
+      console.error('Failed to fetch pending games:', err)
     }
   }, [contracts])
 
