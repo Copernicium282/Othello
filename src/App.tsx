@@ -107,7 +107,7 @@ function PageContent({
   onAIStart: (difficulty: Difficulty) => void
   onAIPlayerMove: (position: number) => void
 }) {
-  const game = useGame(gameId, contracts, account)
+  const { game, refreshGame } = useGame(gameId, contracts, account)
 
   switch (activeTab) {
     case 'play':
@@ -119,6 +119,7 @@ function PageContent({
           gameId={gameId}
           txPending={txPending}
           onMovePending={setTxPending}
+          onRefreshGame={refreshGame}
           onCreateGame={async (opponent, stake) => {
             if (!contracts || !account || !signer || !provider) return
             setTxPending(true)

@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Interface, JsonRpcProvider, Wallet } from 'ethers'
 import type { BrowserProvider, JsonRpcSigner } from 'ethers'
 import { ADDRESSES } from '../lib/contracts'
-
-const SESSION_KEY_STORAGE = 'sessionKey'
 
 const SESSIONS_ABI = [
   'function sessions(address player, address sessionKey) view returns (uint256 gameId, uint64 expiryBlock)',
@@ -45,20 +43,29 @@ export interface UseSessionOptions {
   account: string | null
 }
 
-/** Load the persisted session key from sessionStorage, or create and persist a fresh one. */
-export function makeSessionKey(): SessionKeyInfo {
-  const existing = sessionStorage.getItem(SESSION_KEY_STORAGE)
+const SESSION_KEY_STORAGE_PREFIX = 'othello_sessionKey_'
+
+export function getSessionKeyForAccount(account: string | null): SessionKeyInfo {
+  if (!account) return makeFreshKey()
+  const key = `${SESSION_KEY_STORAGE_PREFIX}${account.toLowerCase()}`
+  const existing = localStorage.getItem(key) || sessionStorage.getItem(key)
   if (existing) {
     try {
-      // SAFETY: Wallet throws on a malformed private key; fall back to a fresh
-      // key so corrupt storage never crashes the hook.
       return { address: new Wallet(existing).address, privateKey: existing }
     } catch {
-      sessionStorage.removeItem(SESSION_KEY_STORAGE)
+      localStorage.removeItem(key)
+      sessionStorage.removeItem(key)
     }
   }
+  return makeFreshKey(account)
+}
+
+function makeFreshKey(account?: string | null): SessionKeyInfo {
   const fresh = Wallet.createRandom()
-  sessionStorage.setItem(SESSION_KEY_STORAGE, fresh.privateKey)
+  if (account) {
+    const storageKey = `${SESSION_KEY_STORAGE_PREFIX}${account.toLowerCase()}`
+    localStorage.setItem(storageKey, fresh.privateKey)
+  }
   return { address: fresh.address, privateKey: fresh.privateKey }
 }
 
@@ -66,25 +73,15 @@ export function useSession(
   options: UseSessionOptions,
 ): SessionApi {
   const { provider, signer, account } = options
-  const [sessionKey, setSessionKey] = useState<SessionKeyInfo>(makeSessionKey)
-  const previousAccountRef = useRef<string | null>(null)
+  const [sessionKey, setSessionKey] = useState<SessionKeyInfo>(() => getSessionKeyForAccount(account))
 
-  // Rotate the session key whenever the account switches to a different
-  // address, or when sessionStorage holds a stale key from a prior session.
+  // Sync session key whenever account changes
   useEffect(() => {
-    const accountChanged =
-      account !== null &&
-      previousAccountRef.current !== null &&
-      account !== previousAccountRef.current
-    const persisted = sessionStorage.getItem(SESSION_KEY_STORAGE)
-    const staleStorage = persisted !== null && persisted !== sessionKey.privateKey
-    if (accountChanged || staleStorage) {
-      const fresh = Wallet.createRandom()
-      setSessionKey({ address: fresh.address, privateKey: fresh.privateKey })
-      sessionStorage.setItem(SESSION_KEY_STORAGE, fresh.privateKey)
+    if (account) {
+      const current = getSessionKeyForAccount(account)
+      setSessionKey(current)
     }
-    previousAccountRef.current = account
-  }, [account, sessionKey.privateKey])
+  }, [account])
 
   const registerSession = useCallback(
     async (request: { gameId: string; durationBlocks: number }): Promise<SessionResult> => {
@@ -133,8 +130,10 @@ const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
         })
         await fundTx.wait()
 
-        setSessionKey({ address: fresh.address, privateKey: fresh.privateKey })
-        sessionStorage.setItem(SESSION_KEY_STORAGE, fresh.privateKey)
+        const freshInfo = { address: fresh.address, privateKey: fresh.privateKey }
+        setSessionKey(freshInfo)
+        const storageKey = `${SESSION_KEY_STORAGE_PREFIX}${account.toLowerCase()}`
+        localStorage.setItem(storageKey, fresh.privateKey)
         return { ok: true, hash: tx.hash }
       } catch (err) {
         console.error('renewSession error:', err)
@@ -220,8 +219,10 @@ const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
         })
         await tx.wait()
         const fresh = Wallet.createRandom()
-        setSessionKey({ address: fresh.address, privateKey: fresh.privateKey })
-        sessionStorage.setItem(SESSION_KEY_STORAGE, fresh.privateKey)
+        const freshInfo = { address: fresh.address, privateKey: fresh.privateKey }
+        setSessionKey(freshInfo)
+        const storageKey = `${SESSION_KEY_STORAGE_PREFIX}${account.toLowerCase()}`
+        localStorage.setItem(storageKey, fresh.privateKey)
         return { ok: true }
       } catch {
         return { ok: false, reason: 'unsupported' }

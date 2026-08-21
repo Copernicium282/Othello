@@ -15,6 +15,7 @@ export interface GameViewProps {
   gameId: string | null
   txPending: boolean
   onMovePending: (pending: boolean) => void
+  onRefreshGame?: () => Promise<void>
   onCreateGame?: (opponentAddress: string, stake: string) => void
   onAcceptGame?: (gameId: string) => void
   onSelectGame?: (gameId: string) => void
@@ -48,6 +49,7 @@ export function GameView({
   gameId,
   txPending,
   onMovePending,
+  onRefreshGame,
   onCreateGame,
   onAcceptGame,
   onSelectGame,
@@ -154,6 +156,10 @@ export function GameView({
         const tx = await contracts.game.makeMove(gameId, position)
         await tx.wait()
         moveSucceeded = true
+      }
+
+      if (moveSucceeded) {
+        onRefreshGame?.()
       }
     } catch (err) {
       console.error('handleCellClick error:', err)

@@ -89,12 +89,27 @@ function parseGameState(
   }
 }
 
+export interface UseGameResult {
+  game: GameState
+  refreshGame: () => Promise<void>
+}
+
 export function useGame(
   gameId: string | null,
   contracts: Contracts | null,
   account: string | null,
-): GameState {
+): UseGameResult {
   const [state, setState] = useState<GameState>(DEFAULT_STATE)
+
+  const fetchGame = async () => {
+    if (!gameId || !contracts) return
+    try {
+      const raw = await contracts.readOnlyGame.games(gameId)
+      setState(parseGameState(raw, account))
+    } catch {
+      // Keep existing state rather than wiping to DEFAULT_STATE on temporary network stutter
+    }
+  }
 
   useEffect(() => {
     if (!gameId || !contracts) {
@@ -104,21 +119,20 @@ export function useGame(
 
     let cancelled = false
 
-    const fetchGame = async () => {
+    const runFetch = async () => {
       try {
-        const raw = await contracts.game.games(gameId)
+        const raw = await contracts.readOnlyGame.games(gameId)
         if (!cancelled) {
           setState(parseGameState(raw, account))
         }
       } catch {
-        if (!cancelled) {
-          setState(DEFAULT_STATE)
-        }
+        // Keep existing state
       }
     }
 
-    fetchGame()
-    const id = setInterval(fetchGame, 5000)
+    runFetch()
+    // Somnia sub-second blocks: poll every 1.2s for snappy board updates
+    const id = setInterval(runFetch, 1200)
 
     return () => {
       cancelled = true
@@ -126,5 +140,6 @@ export function useGame(
     }
   }, [gameId, contracts, account])
 
-  return useMemo(() => state, [state])
+  const game = useMemo(() => state, [state])
+  return { game, refreshGame: fetchGame }
 }

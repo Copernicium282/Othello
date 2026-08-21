@@ -9,20 +9,21 @@
   max-width: 480px;
   background: var(--color-surface);
   border: 2px solid var(--color-hairline-strong);
-  padding: 16px 24px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   box-sizing: border-box;
   font-family: var(--font-mono);
+  position: relative;
 }
 
 .game-status-bar__turn {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-ink);
 }
@@ -46,7 +47,7 @@
 .game-status-bar__counts {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .game-status-bar__count {
@@ -57,7 +58,7 @@
 
 .game-status-bar__count-num {
   font-family: var(--font-heading);
-  font-size: 48px;
+  font-size: 40px;
   font-weight: 400;
   line-height: 1.0;
   letter-spacing: 0.02em;
@@ -74,7 +75,7 @@
 
 .game-status-bar__count-label {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -82,17 +83,35 @@
 }
 
 .game-status-bar__tx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-mono);
-  background: var(--color-surface-raised);
-  color: var(--color-yin);
-  border: 1px solid var(--color-hairline-strong);
+  background: rgba(230, 160, 30, 0.12);
+  color: #e6a01e;
+  border: 1px solid rgba(230, 160, 30, 0.4);
   border-radius: 0;
-  padding: 6px 14px;
-  font-size: 13px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
+  animation: pulse-badge 1.5s infinite ease-in-out;
+}
+
+.game-status-bar__tx-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #e6a01e;
+  border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(230, 160, 30, 0.5);
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.45; }
 }
 
 
@@ -244,12 +263,13 @@
   align-items: center;
   justify-content: space-between;
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-slate);
-  padding-bottom: var(--space-sm);
-  margin-bottom: var(--space-md);
+  margin-top: 18px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
   border-bottom: 1px solid var(--color-hairline-medium);
 }
 
