@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { BrowserProvider, JsonRpcSigner } from "ethers";
+import { toast } from "../components/Toast";
 
 declare global {
   interface Window {
@@ -20,6 +21,9 @@ export interface WalletState {
   error: string | null
 }
 
+export const SOMNIA_CHAIN_ID_HEX = '0xc488' // 50312
+export const SOMNIA_CHAIN_ID_DEC = 50312
+
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
     account: null,
@@ -31,27 +35,40 @@ export function useWallet() {
   })
 
   const ensureSomniaNetwork = useCallback(async (ethereum: Exclude<Window['ethereum'], undefined>) => {
-    // SAFETY: EIP-3326: wallet_switchEthereumChain rejects with code 4902
-    // when the chain is not in the wallet yet, then we add it explicitly.
-    const chainId = '0xc488'
     try {
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId }],
+        params: [{ chainId: SOMNIA_CHAIN_ID_HEX }],
       })
     } catch (err) {
-      // SAFETY: EIP-3326 switch errors are JSON-RPC errors with a numeric code;
-      // 4902 means the chain is not yet added to the wallet.
-      const code = (err as { code?: number }).code
-      if (code !== 4902) throw err
+      const errorObj = err as { code?: number; message?: string }
+      // Standard 4902: Unrecognized chain ID
+      // -32603: Internal error / chain not found in some custom provider implementations
+      // Or check message if code is generic
+      const isMissingChain =
+        errorObj.code === 4902 ||
+        errorObj.code === -32603 ||
+        (typeof errorObj.message === 'string' &&
+          (errorObj.message.toLowerCase().includes('unrecognized') ||
+           errorObj.message.toLowerCase().includes('not added') ||
+           errorObj.message.toLowerCase().includes('unknown chain')))
+
+      if (!isMissingChain) {
+        throw err
+      }
+
       await ethereum.request({
         method: 'wallet_addEthereumChain',
         params: [
           {
-            chainId,
-            chainName: 'Somnia Shannon',
-            nativeCurrency: { name: 'Somnia', symbol: 'STT', decimals: 18 },
-            rpcUrls: ['https://api.infra.testnet.somnia.network'],
+            chainId: SOMNIA_CHAIN_ID_HEX,
+            chainName: 'Somnia Shannon Testnet',
+            nativeCurrency: { name: 'Somnia Test Token', symbol: 'STT', decimals: 18 },
+            rpcUrls: [
+              'https://dream-rpc.somnia.network',
+              'https://api.infra.testnet.somnia.network',
+            ],
+            blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
           },
         ],
       })
@@ -60,19 +77,23 @@ export function useWallet() {
 
   const connect = useCallback(async () => {
     if (!window.ethereum) {
-      setState(s => ({ ...s, error: 'Metamask not installed' }))
+      const msg = 'MetaMask not detected. Please install MetaMask to connect.'
+      setState(s => ({ ...s, error: msg }))
+      toast('error', msg)
       return
     }
 
     setState(s => ({ ...s, isConnecting: true, error: null }))
 
     try {
-      // eth_requestAccounts prompts MetaMask popup
-      // Returns an array of connected addresses
-      // SAFETY: EIP-1193 request resolves eth_requestAccounts to an array of hex addresses.
+      // Prompt MetaMask connection
       const accounts = await window.ethereum.request<string[]>({
         method: 'eth_requestAccounts',
       })
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found. Please unlock MetaMask.')
+      }
 
       await ensureSomniaNetwork(window.ethereum)
 
@@ -80,16 +101,17 @@ export function useWallet() {
       const signer = await provider.getSigner()
       const network = await provider.getNetwork()
 
-      // SAFETY: network.chainId is a bigint in ethers v6; Somnia Shannon is 50312.
-      if (network.chainId !== 50312n) {
+      if (Number(network.chainId) !== SOMNIA_CHAIN_ID_DEC) {
+        const errorMsg = 'Wrong network: Please switch MetaMask to Somnia Shannon (Chain ID 50312)'
         setState({
           account: null,
           provider: null,
           signer: null,
           chainId: Number(network.chainId),
           isConnecting: false,
-          error: 'Wrong network: switch MetaMask to Somnia Shannon (chainId 50312)',
+          error: errorMsg,
         })
+        toast('error', errorMsg)
         return
       }
 
@@ -101,35 +123,84 @@ export function useWallet() {
         isConnecting: false,
         error: null,
       })
-    } catch(err) {
+    } catch (err) {
+      const errorObj = err as { code?: number; message?: string }
+      let message = 'Connection failed'
+
+      if (errorObj.code === 4001) {
+        message = 'Connection request was rejected in MetaMask.'
+      } else if (errorObj.code === -32002) {
+        message = 'A connection request is already pending in MetaMask. Please open your extension icon.'
+      } else if (err instanceof Error) {
+        message = err.message
+      }
+
       setState(s => ({
         ...s,
         isConnecting: false,
-        error: err instanceof Error ? err.message : 'Connection failed',
+        error: message,
       }))
+      toast('error', message.slice(0, 150))
     }
   }, [ensureSomniaNetwork])
 
+  // Auto-connect if already authorized
+  useEffect(() => {
+    if (!window.ethereum) return
+
+    const checkExistingConnection = async () => {
+      try {
+        const accounts = await window.ethereum!.request<string[]>({
+          method: 'eth_accounts',
+        })
+        if (accounts && accounts.length > 0) {
+          const provider = new BrowserProvider(window.ethereum!)
+          const network = await provider.getNetwork()
+          if (Number(network.chainId) === SOMNIA_CHAIN_ID_DEC) {
+            const signer = await provider.getSigner()
+            setState({
+              account: accounts[0],
+              provider,
+              signer,
+              chainId: Number(network.chainId),
+              isConnecting: false,
+              error: null,
+            })
+          }
+        }
+      } catch {
+        // Silently fail auto-connect
+      }
+    }
+
+    checkExistingConnection()
+  }, [])
+
   // Listen for account/chain changes
   useEffect(() => {
-    if(!window.ethereum) return
+    if (!window.ethereum) return
 
     const handleAccounts = (...args: unknown[]) => {
-      // SAFETY: MetaMask emits accountsChanged with a single argument: an array of hex addresses.
       const accounts = args[0] as string[]
-      if (accounts.length === 0) {
-        setState({account: null, provider: null, signer: null, chainId: null, isConnecting: false, error: null})
+      if (!accounts || accounts.length === 0) {
+        setState({ account: null, provider: null, signer: null, chainId: null, isConnecting: false, error: null })
       } else {
-        // Re-init provider/signer with new account
         const provider = new BrowserProvider(window.ethereum!)
         provider.getSigner().then(signer => {
-          setState(s => ({ ...s, account: accounts[0], provider, signer}))
+          provider.getNetwork().then(network => {
+            if (Number(network.chainId) === SOMNIA_CHAIN_ID_DEC) {
+              setState(s => ({ ...s, account: accounts[0], provider, signer, chainId: Number(network.chainId), error: null }))
+            } else {
+              setState(s => ({ ...s, account: null, provider: null, signer: null, chainId: Number(network.chainId), error: 'Wrong network' }))
+            }
+          })
+        }).catch(() => {
+          setState({ account: null, provider: null, signer: null, chainId: null, isConnecting: false, error: null })
         })
       }
     }
 
-    const handleChain = (..._args: unknown[]) => {
-      // Reload on chain change, simplest approach
+    const handleChain = () => {
       window.location.reload()
     }
 
@@ -142,5 +213,5 @@ export function useWallet() {
     }
   }, [])
 
-  return { ...state, connect}
+  return { ...state, connect }
 }

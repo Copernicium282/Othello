@@ -49,10 +49,10 @@ export function HowToPlay({
           <div className="howtoplay-step__body">
             <strong>Connect your wallet.</strong>{' '}
             <span>
-              Click Connect Wallet in the top-left navigation. MetaMask prompts you to
-              add the Somnia Shannon network (RPC{' '}
-              <code>api.infra.testnet.somnia.network</code>, Chain ID <code>50312</code>
-              ). Approve it and you're connected. No manual network setup needed.
+              Click Connect Wallet. MetaMask will prompt you to
+              add or switch to the Somnia Shannon network (RPC{' '}
+              <code>dream-rpc.somnia.network</code>, Chain ID <code>50312</code>
+              ). Approve it and you're connected.
             </span>
           </div>
           <div className="howtoplay-step__actions">
