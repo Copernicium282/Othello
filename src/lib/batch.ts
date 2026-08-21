@@ -59,7 +59,9 @@ export async function signPermit(
 }
 
 export interface CallsStatus {
-  status: 'PENDING' | 'CONFIRMED' | 'FAILED'
+  // SAFETY: EIP-5792 v1 wallets report string statuses, v2 wallets report
+  // numeric codes (100 pending, 200 confirmed, 600 failed); accept both.
+  status: 'PENDING' | 'CONFIRMED' | 'FAILED' | number
   receipts?: Array<{
     chainId: string
     receipt: {
@@ -75,17 +77,24 @@ export async function sendCallsBatch(
   account: string,
   calls: BatchCall[],
 ): Promise<string> {
-  // SAFETY: wallet_sendCalls (EIP-5792) returns the bundle id string. No
-  // paymasterService capability: gas comes from the EOA balance, and an
-  // unsupported sponsor URL makes wallets reject the whole bundle.
-  const bundleId = (await provider.send('wallet_sendCalls', [
+  // SAFETY: MetaMask requires version '2.0.0' with a top-level atomicRequired
+  // flag; older wallets that speak v1 reject the extra field, which routes to
+  // the sequential fallback in the caller. Atomicity is mandatory because the
+  // permit call must land before createGame pulls the stake.
+  const response = await provider.send('wallet_sendCalls', [
     {
-      version: '1.0',
+      version: '2.0.0',
       chainId: `0x${SOMNIA_CHAIN_ID.toString(16)}`,
       from: account,
+      atomicRequired: true,
       calls,
     },
-  ])) as string
+  ])
+  // SAFETY: v1 wallets reply with a bare bundle id string, v2 wallets wrap it
+  // as { id }; reading .id off the primitive yields undefined so the fallback
+  // normalizes both to the bundle id used by wallet_getCallsStatus.
+  const envelope = response as { id?: unknown }
+  const bundleId = String(envelope.id ?? response)
   return bundleId
 }
 
@@ -97,7 +106,7 @@ export async function waitForCalls(
   for (let attempt = 0; attempt < 30; attempt++) {
     // SAFETY: wallet_getCallsStatus (EIP-5792) returns { status, receipts }.
     const result = (await provider.send('wallet_getCallsStatus', [bundleId])) as CallsStatus
-    if (result.status === 'CONFIRMED') {
+    if (result.status === 'CONFIRMED' || result.status === 200) {
       const receipts = result.receipts ?? []
       for (const entry of receipts) {
         // SAFETY: per EIP-5792, receipt.status is '0x1' (success) or '0x0'
@@ -108,7 +117,9 @@ export async function waitForCalls(
       }
       return receipts
     }
-    if (result.status === 'FAILED') throw new Error('Batched transaction failed')
+    if (result.status === 'FAILED' || result.status === 600) {
+      throw new Error('Batched transaction failed')
+    }
     await new Promise(resolve => setTimeout(resolve, 2000))
   }
   throw new Error('Timed out waiting for batched transaction')
@@ -119,9 +130,14 @@ export interface RpcError {
   message?: string
 }
 
-/** True when the wallet lacks wallet_sendCalls (e.g. pre-EIP-5792 MetaMask). */
+/** True when the wallet cannot run our batch schema (fallback to sequential txs). */
 export function isMethodNotFound(err: RpcError): boolean {
-  // SAFETY: -32601 is JSON-RPC "method not found", the standard signal for an
-  // unsupported method; some wallets report it in the message string instead.
-  return err.code === -32601 || (err.message ?? '').toLowerCase().includes('not found')
+  // SAFETY: -32601 is JSON-RPC "method not found" and -32602 "invalid params";
+  // wallets that predate EIP-5792 or speak the other schema version report one
+  // of these, some only in the message string.
+  return (
+    err.code === -32601 ||
+    err.code === -32602 ||
+    (err.message ?? '').toLowerCase().includes('not found')
+  )
 }
