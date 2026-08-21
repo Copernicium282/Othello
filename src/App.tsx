@@ -17,7 +17,7 @@ import { GameView } from './components/GameView'
 import { AIGameView } from './components/AIGameView'
 import type { Player } from './components/Leaderboard'
 import { HowToPlay } from './components/HowToPlay'
-import { ADDRESSES } from './lib/contracts'
+import { ADDRESSES, parseCustomError } from './lib/contracts'
 import { ToastContainer, toast } from './components/Toast'
 import './App.css'
 
@@ -156,7 +156,8 @@ function PageContent({
               toast('success', 'Game created! Game #' + newGameId)
             } catch (err) {
               console.error('createGame failed:', err)
-              const reason = err instanceof Error ? err.message : String(err)
+              const custom = parseCustomError(err)
+              const reason = custom || (err instanceof Error ? err.message : String(err))
               toast('error', ('Failed to create game: ' + reason).slice(0, 120))
             } finally {
               setTxPending(false)
@@ -168,15 +169,23 @@ function PageContent({
             setTxPending(true)
             try {
               const gameData = await contracts.game.games(id)
+              const status = Number(gameData[4])
+              if (status === 1) {
+                // Game is already active! Just open it directly.
+                toast('success', `Joined active Game #${id}`)
+                return
+              } else if (status === 2) {
+                toast('error', `Game #${id} has already finished.`)
+                setGameId(null)
+                return
+              }
+
               const stakeWei = gameData[2][3]
-              // SAFETY: yygBalance is produced by formatUnits(value, 18), so
-              // parsing it back with the same decimals cannot throw.
               if (parseUnits(yygBalance, 18) < stakeWei) {
                 toast('error', 'Not enough YYG to match this stake. Wrap STT into YYG first.')
                 setTxPending(false)
                 return
               }
-              // SAFETY: allowance is a uint256 view result; comparison is bigint.
               const allowance: bigint = await contracts.yyg.allowance(account, ADDRESSES.game)
               if (allowance < stakeWei) {
                 const approveTx = await contracts.yyg.approve(ADDRESSES.game, MaxUint256)
@@ -193,12 +202,16 @@ function PageContent({
               toast('success', 'Game accepted!')
             } catch (err) {
               console.error('acceptGame failed:', err)
-              const reason = err instanceof Error ? err.message : String(err)
+              const custom = parseCustomError(err)
+              const reason = custom || (err instanceof Error ? err.message : String(err))
               toast('error', ('Failed to accept game: ' + reason).slice(0, 120))
-              setGameId(null)
             } finally {
               setTxPending(false)
             }
+          }}
+          onSelectGame={(id) => {
+            setGameId(id)
+            toast('info', `Opened Game #${id}`)
           }}
           pendingGames={pendingGames}
           session={session}
@@ -288,8 +301,17 @@ export function App() {
   const contracts = useContracts(wallet.provider, wallet.signer)
   const [yygBalance, setYygBalance] = useState('0')
   const [sttBalance, setSttBalance] = useState('0.000000')
-  const [gameId, setGameId] = useState<string | null>(null)
+  const [gameId, setGameIdState] = useState<string | null>(() => localStorage.getItem('othello.activeGameId'))
   const [txPending, setTxPending] = useState(false)
+
+  const setGameId = useCallback((id: string | null) => {
+    setGameIdState(id)
+    if (id) {
+      localStorage.setItem('othello.activeGameId', id)
+    } else {
+      localStorage.removeItem('othello.activeGameId')
+    }
+  }, [])
   const [players, setPlayers] = useState<Player[]>([])
   const [treasuryBalance, setTreasuryBalance] = useState('0')
   const [seasonDeadline, setSeasonDeadline] = useState(0)

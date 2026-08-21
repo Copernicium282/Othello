@@ -4,6 +4,7 @@ import './game.css'
 export interface GameLobbyProps {
   onCreateGame?: (opponentAddress: string, stake: string) => void
   onAcceptGame?: (gameId: string) => void
+  onSelectGame?: (gameId: string) => void
   disabled?: boolean
   pendingGames?: Array<{ gameId: string; challenger: string; stake: string }>
 }
@@ -14,7 +15,7 @@ function shortenAddress(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
-export function GameLobby({ onCreateGame, onAcceptGame, disabled = false, pendingGames = [] }: GameLobbyProps) {
+export function GameLobby({ onCreateGame, onAcceptGame, onSelectGame, disabled = false, pendingGames = [] }: GameLobbyProps) {
   const [opponentAddress, setOpponentAddress] = useState('')
   const [stake, setStake] = useState('')
   const [gameId, setGameId] = useState('')
@@ -58,9 +59,9 @@ export function GameLobby({ onCreateGame, onAcceptGame, disabled = false, pendin
 
       <div className="game-lobby__divider" />
 
-      {/* Accept flow */}
+      {/* Accept & Resume flow */}
       <div className="game-lobby__card">
-        <span className="game-lobby__eyebrow">Accept</span>
+        <span className="game-lobby__eyebrow">Accept or Resume Game</span>
         <div className="game-lobby__field">
           <label className="game-lobby__label">Game ID</label>
           <input
@@ -72,13 +73,24 @@ export function GameLobby({ onCreateGame, onAcceptGame, disabled = false, pendin
             disabled={disabled}
           />
         </div>
-        <button
-          className="game-lobby__button game-lobby__button--yang"
-          disabled={disabled || !gameId}
-          onClick={() => onAcceptGame?.(gameId)}
-        >
-          Accept Game
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="game-lobby__button game-lobby__button--yang"
+            style={{ flex: 1 }}
+            disabled={disabled || !gameId}
+            onClick={() => onAcceptGame?.(gameId)}
+          >
+            Accept Game
+          </button>
+          <button
+            className="game-lobby__button"
+            style={{ flex: 1, background: 'var(--color-yin)', color: '#fff' }}
+            disabled={disabled || !gameId}
+            onClick={() => onSelectGame?.(gameId)}
+          >
+            Open Game #{gameId || '...'}
+          </button>
+        </div>
       </div>
 
       <div className="game-lobby__divider" />

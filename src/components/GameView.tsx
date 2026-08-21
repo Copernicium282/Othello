@@ -17,6 +17,7 @@ export interface GameViewProps {
   onMovePending: (pending: boolean) => void
   onCreateGame?: (opponentAddress: string, stake: string) => void
   onAcceptGame?: (gameId: string) => void
+  onSelectGame?: (gameId: string) => void
   pendingGames?: Array<{ gameId: string; challenger: string; stake: string }>
   showFlipCounts?: boolean
   onToggleFlipCounts?: () => void
@@ -49,6 +50,7 @@ export function GameView({
   onMovePending,
   onCreateGame,
   onAcceptGame,
+  onSelectGame,
   pendingGames = [],
   showFlipCounts = false,
   onToggleFlipCounts,
@@ -300,6 +302,7 @@ export function GameView({
           <GameLobby
             onCreateGame={onCreateGame}
             onAcceptGame={onAcceptGame}
+            onSelectGame={onSelectGame}
             disabled={txPending}
             pendingGames={pendingGames}
           />
