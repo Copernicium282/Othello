@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Interface, JsonRpcProvider, Wallet } from 'ethers'
+import { Contract, Interface, JsonRpcProvider, Wallet } from 'ethers'
 import type { BrowserProvider, JsonRpcSigner } from 'ethers'
 import { ADDRESSES } from '../lib/contracts'
 
 const SESSIONS_ABI = [
   'function sessions(address player, address sessionKey) view returns (uint256 gameId, uint64 expiryBlock)',
 ] as const
+
+const SESSION_FUND_WEI = 10n ** 17n // 0.1 STT
+const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
 
 export interface SessionKeyInfo {
   address: string
@@ -105,25 +108,24 @@ export function useSession(
     [signer, account, sessionKey],
   )
 
-const SESSION_FUND_WEI = 10n ** 17n // 0.1 STT
-const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
-
   const renewSession = useCallback(
     async (request: { gameId: string; durationBlocks: number }): Promise<SessionResult> => {
       if (!signer || !account) return { ok: false, reason: 'no-wallet' }
       const fresh = Wallet.createRandom()
       try {
-        const tx = await signer.sendTransaction({
-          to: ADDRESSES.game,
-          data: new Interface(['function authorizeSession(uint256 gameId, address sessionKey, uint64 durationBlocks)']).encodeFunctionData(
-            'authorizeSession',
-            [BigInt(request.gameId), fresh.address, request.durationBlocks],
-          ),
-          value: SESSION_FUND_WEI,
-        })
+        const gameContract = new Contract(
+          ADDRESSES.game,
+          ['function authorizeSession(uint256 gameId, address sessionKey, uint64 durationBlocks) external'],
+          signer,
+        )
+        const tx = await gameContract.authorizeSession(
+          BigInt(request.gameId),
+          fresh.address,
+          request.durationBlocks,
+        )
         await tx.wait()
 
-        // Also ensure the fresh session key has STT gas directly
+        // Directly fund the fresh session key with STT gas for zero-popup moves
         const fundTx = await signer.sendTransaction({
           to: fresh.address,
           value: SESSION_FUND_WEI,
@@ -137,10 +139,11 @@ const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
         return { ok: true, hash: tx.hash }
       } catch (err) {
         console.error('renewSession error:', err)
-        return { ok: false, reason: 'unsupported' }
+        const message = err instanceof Error ? err.message : String(err)
+        return { ok: false, reason: message }
       }
     },
-    [signer, account, SESSION_FUND_WEI],
+    [signer, account],
   )
 
   const isSessionActive = useCallback(
