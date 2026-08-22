@@ -4,19 +4,17 @@ Fully on-chain Othello (Reversi) with wagering, ELO ratings, and seasonal treasu
 
 ## How to Play
 
-1. Connect MetaMask to Somnia Shannon testnet (chainId 50312)
-2. Wrap STT into YYG tokens (1 STT = 100,000 YYG)
-3. Challenge an opponent by staking YYG
-4. Opponent accepts and matches your stake
-5. Play Othello, each move is a confirmed on-chain tx
-6. Winner takes 96% of the combined pot, 4% goes to the seasonal treasury
+1. **Connect Wallet:** Click Connect Wallet (auto-adds / switches to Somnia Shannon testnet: chainId `50312`, RPC `https://dream-rpc.somnia.network` or `https://api.infra.testnet.somnia.network`).
+2. **Wrap Tokens:** Convert testnet STT into YYG tokens (1 STT = 100,000 YYG).
+3. **Challenge or Accept:** Challenge an opponent with a YYG stake, browse open pending games, or enter a Game ID to accept / resume.
+4. **Play Othello:** Every move is a confirmed on-chain transaction with sub-second board updates.
+5. **Win the Stake:** Winner takes 96% of the combined stake; 4% accumulates in the seasonal treasury.
 
-**Sessions (popup-free moves):** creating or accepting a game also authorizes a
-browser-side session key and funds it with 0.1 STT for gas, all in the same
-transaction. Every move afterwards is signed by the session key with zero MetaMask
-confirmations; the session is renewed with one click when it expires.
+**Sessions (zero-popup moves):**
+Creating or accepting a game authorizes an in-browser session key and funds it with 0.1 STT for gas in the same single transaction. Every subsequent move is signed by the session key with zero wallet popups. If a session key expires, you can renew it with one click or continue playing via seamless direct signing fallback.
 
-No wallet? The **AI tab** lets you play locally against a built-in AI (alpha-beta search, 4 difficulty levels), no chain calls required.
+**AI Mode:**
+No wallet or funds? Jump straight into the **AI tab** to play locally against a built-in AI (alpha-beta search with 4 difficulty levels).
 
 ## Running Locally
 
@@ -61,12 +59,14 @@ Set `VITE_THIRDWEB_CLIENT_ID` in `.env` (see `.env.example`); Vercel deployments
 - OpenZeppelin ERC-20 + Ownable
 - oxlint
 
-## Contract Security
+## Contract Security & UX Features
 
-- `settleSeason` enforces `verifyTopThree` before any payout, arbitrary top-3 arrays revert
+- `settleSeason` enforces `verifyTopThree` before any payout; arbitrary top-3 arrays revert
 - Permissionless `resolveTimeout` (24h inactivity) prevents stakes from being locked in abandoned games
 - `MIN_STAKE` (10 YYG) enforced on create and accept; `unwrap` reverts on dust amounts
 - Challenger daily cap (20 games/day) enforced at both create and accept time
+- Custom error decoding across all contract reverts for clean user feedback
+- Resilient public fallback RPCs for game queries, leaderboard, and pending games list
 
 ## Architecture
 
