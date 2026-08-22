@@ -140,7 +140,7 @@ const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
         return { ok: false, reason: 'unsupported' }
       }
     },
-    [signer, account],
+    [signer, account, SESSION_FUND_WEI],
   )
 
   const isSessionActive = useCallback(
@@ -156,10 +156,9 @@ const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
         const sessionsIface = new Interface(SESSIONS_ABI)
         const data = sessionsIface.encodeFunctionData('sessions', [account, sessionKey.address])
         const result = await provider.call({ to: ADDRESSES.game, data })
-        const rawDecoded: unknown = sessionsIface.decodeFunctionResult('sessions', result)
-        const decoded = rawDecoded as [bigint, bigint]
-        const storedGameId = decoded[0]
-        const expiryBlock = decoded[1]
+        const decoded = sessionsIface.decodeFunctionResult('sessions', result)
+        const storedGameId = BigInt(decoded[0])
+        const expiryBlock = BigInt(decoded[1])
         if (expiryBlock === 0n) return inactive
         const blockNumber = BigInt(await provider.getBlockNumber())
         const active = storedGameId === BigInt(gameId) && blockNumber <= expiryBlock

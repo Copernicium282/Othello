@@ -1,19 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import { registerToastSink, type ToastMessage } from '../lib/toastBus'
 import './toast.css'
-
-export type ToastType = 'success' | 'error' | 'info'
-
-export interface ToastMessage {
-  id: string
-  type: ToastType
-  message: string
-}
-
-let _addToast: ((msg: Omit<ToastMessage, 'id'>) => void) | null = null
-
-export function toast(type: ToastType, message: string) {
-  _addToast?.({ type, message })
-}
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
@@ -27,8 +14,10 @@ export function ToastContainer() {
   }, [])
 
   useEffect(() => {
-    _addToast = addToast
-    return () => { _addToast = null }
+    registerToastSink(addToast)
+    return () => {
+      registerToastSink(null)
+    }
   }, [addToast])
 
   return (

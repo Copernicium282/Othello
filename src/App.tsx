@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react'
-import { formatUnits, formatEther, parseUnits, MaxUint256 } from 'ethers'
+import { formatUnits, formatEther, parseUnits, MaxUint256, isError } from 'ethers'
 import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
 import { useWallet } from './hooks/useWallet'
 import { useContracts } from './hooks/useContracts'
@@ -18,7 +18,8 @@ import { AIGameView } from './components/AIGameView'
 import type { Player } from './components/Leaderboard'
 import { HowToPlay } from './components/HowToPlay'
 import { ADDRESSES, parseCustomError } from './lib/contracts'
-import { ToastContainer, toast } from './components/Toast'
+import { toast } from './lib/toastBus'
+import { ToastContainer } from './components/Toast'
 import './App.css'
 
 const Leaderboard = lazy(() => import('./components/Leaderboard').then(m => ({ default: m.Leaderboard })))
@@ -157,7 +158,7 @@ function PageContent({
               toast('success', 'Game created! Game #' + newGameId)
             } catch (err) {
               console.error('createGame failed:', err)
-              const custom = parseCustomError(err)
+              const custom = isError(err, 'CALL_EXCEPTION') ? parseCustomError(err) : null
               const reason = custom || (err instanceof Error ? err.message : String(err))
               toast('error', ('Failed to create game: ' + reason).slice(0, 120))
             } finally {
@@ -203,7 +204,7 @@ function PageContent({
               toast('success', 'Game accepted!')
             } catch (err) {
               console.error('acceptGame failed:', err)
-              const custom = parseCustomError(err)
+              const custom = isError(err, 'CALL_EXCEPTION') ? parseCustomError(err) : null
               const reason = custom || (err instanceof Error ? err.message : String(err))
               toast('error', ('Failed to accept game: ' + reason).slice(0, 120))
             } finally {
@@ -367,8 +368,8 @@ export function App() {
       for (let i = 0; i < nextId; i++) {
         try {
           const gameData = await contracts.readOnlyGame.games(i)
-          const p1 = gameData[2][0] as string
-          const p2 = gameData[3][0] as string
+          const p1 = String(gameData[2][0])
+          const p2 = String(gameData[3][0])
           const status = Number(gameData[4])
           const blackBits = BigInt(gameData[0])
           const whiteBits = BigInt(gameData[1])
@@ -443,8 +444,8 @@ export function App() {
           if (Number(gameData[4]) === 0) {
             pending.push({
               gameId: String(i),
-              challenger: gameData[2][0] as string,
-              stake: formatUnits(gameData[2][3] as bigint, 18),
+              challenger: String(gameData[2][0]),
+              stake: formatUnits(BigInt(gameData[2][3]), 18),
             })
           }
         } catch {

@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { BrowserProvider, JsonRpcSigner } from "ethers";
-import { toast } from "../components/Toast";
+import { toast } from "../lib/toastBus";
 
 declare global {
   interface Window {
     ethereum?: {
       request: <T>(args: { method: string; params?: unknown[] }) => Promise<T>
-      on: (event: string, cb: (...args: unknown[]) => void) => void
-      removeListener: (event: string, cb: (...args: unknown[]) => void) => void
+      on: <T>(event: string, cb: (payload: T, ...rest: unknown[]) => void) => void
+      removeListener: <T>(event: string, cb: (payload: T, ...rest: unknown[]) => void) => void
     }
   }
 }
@@ -41,17 +41,18 @@ export function useWallet() {
         params: [{ chainId: SOMNIA_CHAIN_ID_HEX }],
       })
     } catch (err) {
+      // SAFETY: EIP-1193 switch errors are objects carrying a numeric `code`
+      // and a string `message`; optional chaining tolerates either missing.
       const errorObj = err as { code?: number; message?: string }
       // Standard 4902: Unrecognized chain ID
       // -32603: Internal error / chain not found in some custom provider implementations
-      // Or check message if code is generic
+      const lowerMessage = errorObj.message?.toLowerCase() ?? ''
       const isMissingChain =
         errorObj.code === 4902 ||
         errorObj.code === -32603 ||
-        (typeof errorObj.message === 'string' &&
-          (errorObj.message.toLowerCase().includes('unrecognized') ||
-           errorObj.message.toLowerCase().includes('not added') ||
-           errorObj.message.toLowerCase().includes('unknown chain')))
+        lowerMessage.includes('unrecognized') ||
+        lowerMessage.includes('not added') ||
+        lowerMessage.includes('unknown chain')
 
       if (!isMissingChain) {
         throw err
@@ -124,6 +125,8 @@ export function useWallet() {
         error: null,
       })
     } catch (err) {
+      // SAFETY: EIP-1193 provider rejections are objects with a numeric
+      // `code` (4001 user rejection, -32002 request already pending).
       const errorObj = err as { code?: number; message?: string }
       let message = 'Connection failed'
 
@@ -180,8 +183,9 @@ export function useWallet() {
   useEffect(() => {
     if (!window.ethereum) return
 
-    const handleAccounts = (...args: unknown[]) => {
-      const accounts = args[0] as string[]
+    // EIP-1193 contract: 'accountsChanged' emits the new accounts array
+    // (empty when disconnected); 'chainChanged' emits a chainId we ignore.
+    const handleAccounts = (accounts: string[]) => {
       if (!accounts || accounts.length === 0) {
         setState({ account: null, provider: null, signer: null, chainId: null, isConnecting: false, error: null })
       } else {

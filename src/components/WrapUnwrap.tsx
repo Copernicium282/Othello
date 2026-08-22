@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { parseEther, parseUnits } from 'ethers'
 import type { useContracts } from '../hooks/useContracts'
-import { toast } from './Toast'
+import { toast } from '../lib/toastBus'
 import './pages.css'
 
 const RATIO = 100_000

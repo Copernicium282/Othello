@@ -5,7 +5,7 @@ import type { SessionActions, SessionResult, SessionStatus } from '../hooks/useS
 import { Board } from './Board'
 import { GameStatusBar } from './GameStatusBar'
 import { GameLobby } from './GameLobby'
-import { toast } from './Toast'
+import { toast } from '../lib/toastBus'
 import './game.css'
 
 export interface GameViewProps {

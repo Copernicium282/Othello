@@ -56,41 +56,31 @@ export const GAME_ABI = [
   'error NotOwner()',
 ] as const
 
-export const ERROR_MESSAGES: Record<string, string> = {
-  GameStatusInvalid: 'Game is already active, completed, or cancelled.',
-  WrongOpponent: 'You are not the designated opponent or challenger for this game.',
-  InvalidOpponent: 'You cannot play against yourself.',
-  MinimumStake: 'Stake is below the minimum required amount (10 YYG).',
-  StakeTransferFailed: 'Failed to transfer YYG stake. Please check your YYG balance and allowance.',
-  Exceeded_Daily_Cap: 'Daily game cap exceeded for one of the players.',
-  Cooldown_Valid: 'Game cooldown in progress. Please wait before challenging again.',
-  GameNotActive: 'Game is not in active state.',
-  NotYourTurn: 'It is not your turn to move.',
-  IllegalMove: 'That move is not legal.',
-  PositionOccupied: 'That board position is already occupied.',
-  TimeoutNotReached: 'Turn timeout not yet reached.',
-}
+// Keyed by 4-byte revert selectors (keccak of the error signature, first 4 bytes).
+const ERROR_MESSAGES = new Map<string, string>([
+  ['0x17286dc4', 'Game is already active, completed, or cancelled.'],
+  ['0xc561a2f1', 'You are not the designated opponent or challenger for this game.'],
+  ['0xab02711d', 'You cannot play against yourself.'],
+  ['0x047e14bb', 'Stake is below the minimum required amount (10 YYG).'],
+  ['0x48c7b0bc', 'Failed to transfer YYG stake. Please check your YYG balance and allowance.'],
+  ['0x975c58d9', 'Daily game cap exceeded for one of the players.'],
+  ['0x2c9ba299', 'Game cooldown in progress. Please wait before challenging again.'],
+  ['0x00a30971', 'Game is not in active state.'],
+  ['0xe60c8f58', 'It is not your turn to move.'],
+  ['0xab08fbe2', 'That move is not legal.'],
+  ['0x82432057', 'That board position is already occupied.'],
+  ['0x9b0056ac', 'Turn timeout not yet reached.'],
+])
 
-export function parseCustomError(err: unknown): string | null {
-  if (!err) return null
-  const errObj = err as { data?: string; error?: { data?: string }; info?: { error?: { data?: string } } }
-  const data = errObj.data || errObj.error?.data || errObj.info?.error?.data
-  if (typeof data === 'string' && data.startsWith('0x')) {
-    const selector = data.slice(0, 10).toLowerCase()
-    if (selector === '0x17286dc4') return ERROR_MESSAGES.GameStatusInvalid
-    if (selector === '0xc561a2f1') return ERROR_MESSAGES.WrongOpponent
-    if (selector === '0xab02711d') return ERROR_MESSAGES.InvalidOpponent
-    if (selector === '0x047e14bb') return ERROR_MESSAGES.MinimumStake
-    if (selector === '0x48c7b0bc') return ERROR_MESSAGES.StakeTransferFailed
-    if (selector === '0x975c58d9') return ERROR_MESSAGES.Exceeded_Daily_Cap
-    if (selector === '0x2c9ba299') return ERROR_MESSAGES.Cooldown_Valid
-    if (selector === '0x00a30971') return ERROR_MESSAGES.GameNotActive
-    if (selector === '0xe60c8f58') return ERROR_MESSAGES.NotYourTurn
-    if (selector === '0xab08fbe2') return ERROR_MESSAGES.IllegalMove
-    if (selector === '0x82432057') return ERROR_MESSAGES.PositionOccupied
-    if (selector === '0x9b0056ac') return ERROR_MESSAGES.TimeoutNotReached
-  }
-  return null
+/**
+ * Map a CALL_EXCEPTION revert to its human-readable message.
+ * Callers must narrow caught values with ethers.isError(err, 'CALL_EXCEPTION')
+ * before invoking this; that call is the I/O boundary parser. The narrowed
+ * error carries `data?: null | string` with the raw revert payload.
+ */
+export function parseCustomError(error: { data?: null | string }): string | null {
+  const selector = (error.data ?? '').slice(0, 10).toLowerCase()
+  return ERROR_MESSAGES.get(selector) ?? null
 }
 
 export const ELO_ABI = [
