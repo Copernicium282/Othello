@@ -71,7 +71,7 @@ export function Footer({ onNavigate }: { onNavigate: (page: FooterPage) => void 
 
         <div className="footer-bottom">
           <span className="footer-chain-info">
-            Somnia Shannon · chainId 50312
+            Sepolia CELO · chainId 11142220
           </span>
         </div>
       </div>

@@ -1,7 +1,9 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react'
 import { formatUnits, formatEther, parseUnits, MaxUint256, isError } from 'ethers'
-import type { BrowserProvider, Contract, JsonRpcSigner } from 'ethers'
+import type { AbstractProvider, Contract, Signer } from 'ethers'
 import { useWallet } from './hooks/useWallet'
+import { useLocalWallet } from './hooks/useLocalWallet'
+import { LocalWalletModal } from './components/LocalWalletModal'
 import { useContracts } from './hooks/useContracts'
 import { useGame } from './hooks/useGame'
 import { useAIGame } from './hooks/useAIGame'
@@ -9,7 +11,6 @@ import type { AIGameState } from './hooks/useAIGame'
 import type { Difficulty } from './lib/ai'
 import { useSession } from './hooks/useSession'
 import type { SessionResult } from './hooks/useSession'
-import { PromoBanner } from './components/PromoBanner'
 import { Nav } from './components/Nav'
 import { YinYangStripe } from './components/YinYangStripe'
 import { Footer } from './components/Footer'
@@ -29,8 +30,8 @@ const Team = lazy(() => import('./components/Team').then(m => ({ default: m.Team
 
 export type Tab = 'play' | 'ai' | 'leaderboard' | 'treasury' | 'wrap' | 'team' | 'howtoplay'
 
-// 0.1 STT funded to the session key, enough for ~12 moves at ~0.008 STT each.
-const SESSION_FUND_WEI = 10n ** 17n
+// 0.005 CELO funded to the session key, enough for dozens of moves at sub-cent gas fees.
+const SESSION_FUND_WEI = 5n * (10n ** 15n)
 
 /** Extract the GameCreated gameId from a transaction receipt, if present. */
 function parseGameId(
@@ -69,6 +70,7 @@ function PageContent({
   treasuryBalance,
   seasonDeadline,
   pendingGames,
+  activeGames,
   fetchTreasury,
   showFlipCounts,
   onToggleFlipCounts,
@@ -79,11 +81,12 @@ function PageContent({
   aiGameState,
   onAIStart,
   onAIPlayerMove,
+  beginnerProtection,
 }: {
   activeTab: Tab
   contracts: ReturnType<typeof useContracts>
-  signer: JsonRpcSigner | null
-  provider: BrowserProvider | null
+  signer: Signer | null
+  provider: AbstractProvider | null
   session: ReturnType<typeof useSession>
   yygBalance: string
   sttBalance: string
@@ -97,6 +100,7 @@ function PageContent({
   treasuryBalance: string
   seasonDeadline: number
   pendingGames: Array<{ gameId: string; challenger: string; stake: string }>
+  activeGames: Array<{ gameId: string; black: string; white: string; stake: string }>
   fetchTreasury: () => void
   showFlipCounts: boolean
   onToggleFlipCounts: () => void
@@ -107,6 +111,12 @@ function PageContent({
   aiGameState: AIGameState
   onAIStart: (difficulty: Difficulty) => void
   onAIPlayerMove: (position: number) => void
+  beginnerProtection?: {
+    active: boolean
+    matchesPlayed: number
+    onToggle: (enabled: boolean) => Promise<void>
+    toggling?: boolean
+  }
 }) {
   const { game, refreshGame } = useGame(gameId, contracts, account)
 
@@ -171,7 +181,7 @@ function PageContent({
             setTxPending(true)
             try {
               const gameData = await contracts.game.games(id)
-              const status = Number(gameData[4])
+              const status = Number(gameData?.[4])
               if (status === 1) {
                 // Game is already active! Just open it directly.
                 toast('success', `Joined active Game #${id}`)
@@ -182,7 +192,7 @@ function PageContent({
                 return
               }
 
-              const stakeWei = gameData[2][3]
+              const stakeWei = gameData?.[2]?.[3]
               if (parseUnits(yygBalance, 18) < stakeWei) {
                 toast('error', 'Not enough YYG to match this stake. Wrap STT into YYG first.')
                 setTxPending(false)
@@ -216,11 +226,13 @@ function PageContent({
             toast('info', `Opened Game #${id}`)
           }}
           pendingGames={pendingGames}
+          activeGames={activeGames}
           session={session}
           showFlipCounts={showFlipCounts}
           onToggleFlipCounts={onToggleFlipCounts}
           onRenewSession={onRenewSession}
           onRevokeSession={onRevokeSession}
+          beginnerProtection={beginnerProtection}
         />
       )
     case 'ai':
@@ -243,6 +255,7 @@ function PageContent({
         />
       )
     case 'treasury': {
+      // eslint-disable-next-line react/purity
       const now = Math.floor(Date.now() / 1000)
       const remaining = Math.max(0, seasonDeadline - now)
       const days = Math.floor(remaining / 86400)
@@ -300,10 +313,24 @@ function PageContent({
 export function App() {
   const [activeTab, setActiveTab] = useState<Tab>('howtoplay')
   const wallet = useWallet()
-  const contracts = useContracts(wallet.provider, wallet.signer)
+  const localWallet = useLocalWallet()
+  const [useLocal, setUseLocal] = useState(false)
+  const [showLocalWalletModal, setShowLocalWalletModal] = useState(false)
+  const activeWallet = useLocal && localWallet.account ? localWallet : wallet
+  const contracts = useContracts(activeWallet.provider, activeWallet.signer)
+
   const [yygBalance, setYygBalance] = useState('0')
   const [sttBalance, setSttBalance] = useState('0.000000')
-  const [gameId, setGameIdState] = useState<string | null>(() => localStorage.getItem('othello.activeGameId'))
+  const [gameId, setGameIdState] = useState<string | null>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const fromUrl = params.get('game')
+      if (fromUrl) return fromUrl
+    } catch {
+      // ignore malformed URL state
+    }
+    return localStorage.getItem('othello.activeGameId')
+  })
   const [txPending, setTxPending] = useState(false)
 
   const setGameId = useCallback((id: string | null) => {
@@ -318,12 +345,16 @@ export function App() {
   const [treasuryBalance, setTreasuryBalance] = useState('0')
   const [seasonDeadline, setSeasonDeadline] = useState(0)
   const [pendingGames, setPendingGames] = useState<Array<{ gameId: string; challenger: string; stake: string }>>([])
+  const [activeGames, setActiveGames] = useState<Array<{ gameId: string; black: string; white: string; stake: string }>>([])
   const [showFlipCounts, setShowFlipCounts] = useState(() => localStorage.getItem('othello.flipBadges') === '1')
+  const [beginnerProtectionActive, setBeginnerProtectionActive] = useState<boolean>(true)
+  const [matchesPlayed, setMatchesPlayed] = useState<number>(0)
+  const [togglingProtection, setTogglingProtection] = useState<boolean>(false)
   const aiGame = useAIGame()
   const session = useSession({
-    provider: wallet.provider,
-    signer: wallet.signer,
-    account: wallet.account,
+    provider: activeWallet.provider,
+    signer: activeWallet.signer,
+    account: activeWallet.account,
   })
 
   const toggleFlipCounts = useCallback(() => {
@@ -331,32 +362,83 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      if (gameId) {
+        url.searchParams.set('game', gameId)
+      } else {
+        url.searchParams.delete('game')
+      }
+      window.history.replaceState({}, '', url)
+    } catch {
+      // ignore environments without history support
+    }
+  }, [gameId])
+
+  useEffect(() => {
     localStorage.setItem('othello.flipBadges', showFlipCounts ? '1' : '0')
   }, [showFlipCounts])
 
   const fetchBalances = useCallback(async () => {
-    if (!wallet.account) {
+    const account = activeWallet.account
+    const provider = activeWallet.provider
+    if (!account) {
       setYygBalance('0')
       setSttBalance('0.000000')
       return
     }
     if (contracts) {
       try {
-        const raw = await contracts.yyg.balanceOf(wallet.account)
+        const raw = await contracts.yyg.balanceOf(account)
         setYygBalance(formatUnits(raw, 18))
       } catch {
         setYygBalance('0')
       }
     }
-    if (wallet.provider) {
+    if (provider) {
       try {
-        const raw = await wallet.provider.getBalance(wallet.account)
+        const raw = await provider.getBalance(account)
         setSttBalance(formatEther(raw))
       } catch {
         setSttBalance('0.000000')
       }
     }
-  }, [contracts, wallet.account, wallet.provider])
+  }, [contracts, activeWallet.account, activeWallet.provider])
+
+  const fetchBeginnerProtection = useCallback(async () => {
+    const account = activeWallet.account
+    if (!account || !contracts) return
+    try {
+      const [active, count] = await Promise.all([
+        contracts.readOnlyGame.isBeginnerProtectionActive(account),
+        contracts.readOnlyGame.totalMatchesPlayed(account),
+      ])
+      setBeginnerProtectionActive(Boolean(active))
+      setMatchesPlayed(Number(count))
+    } catch (err) {
+      console.warn('Failed to fetch beginner protection:', err)
+    }
+  }, [contracts, activeWallet.account])
+
+  const toggleBeginnerProtection = useCallback(async (enable: boolean) => {
+    if (!contracts || !activeWallet.signer) {
+      toast('error', 'Connect wallet first')
+      return
+    }
+    setTogglingProtection(true)
+    try {
+      const tx = await contracts.game.setBeginnerProtection(enable)
+      await tx.wait()
+      setBeginnerProtectionActive(enable)
+      toast('success', enable ? 'Beginner protection enabled' : 'Beginner protection disabled')
+      await fetchBeginnerProtection()
+    } catch (err) {
+      console.error('toggleBeginnerProtection failed:', err)
+      toast('error', 'Failed to toggle protection')
+    } finally {
+      setTogglingProtection(false)
+    }
+  }, [contracts, activeWallet.signer, fetchBeginnerProtection])
 
   const fetchLeaderboard = useCallback(async () => {
     if (!contracts) return
@@ -368,11 +450,11 @@ export function App() {
       for (let i = 0; i < nextId; i++) {
         try {
           const gameData = await contracts.readOnlyGame.games(i)
-          const p1 = String(gameData[2][0])
-          const p2 = String(gameData[3][0])
-          const status = Number(gameData[4])
-          const blackBits = BigInt(gameData[0])
-          const whiteBits = BigInt(gameData[1])
+          const p1 = String(gameData?.[2]?.[0] ?? '')
+          const p2 = String(gameData?.[3]?.[0] ?? '')
+          const status = Number(gameData?.[4])
+          const blackBits = BigInt(gameData?.[0] ?? 0)
+          const whiteBits = BigInt(gameData?.[1] ?? 0)
 
           if (p1 && p1 !== '0x0000000000000000000000000000000000000000') {
             if (!playerMap.has(p1)) playerMap.set(p1, { wins: 0, losses: 0, elo: 1200 })
@@ -435,17 +517,26 @@ export function App() {
     try {
       const nextId = Number(await contracts.readOnlyGame.nextGameId())
       const pending: Array<{ gameId: string; challenger: string; stake: string }> = []
+      const active: Array<{ gameId: string; black: string; white: string; stake: string }> = []
       const start = Math.max(0, nextId - 50)
 
       for (let i = start; i < nextId; i++) {
         try {
           const gameData = await contracts.readOnlyGame.games(i)
           // gameData[4] is status: 0 = PENDING, 1 = ACTIVE, 2 = FINISHED
-          if (Number(gameData[4]) === 0) {
+          const status = Number(gameData?.[4])
+          if (status === 0) {
             pending.push({
               gameId: String(i),
-              challenger: String(gameData[2][0]),
-              stake: formatUnits(BigInt(gameData[2][3]), 18),
+              challenger: String(gameData?.[2]?.[0] ?? ''),
+              stake: formatUnits(BigInt(gameData?.[2]?.[3] ?? 0), 18),
+            })
+          } else if (status === 1) {
+            active.push({
+              gameId: String(i),
+              black: String(gameData?.[2]?.[0] ?? ''),
+              white: String(gameData?.[3]?.[0] ?? ''),
+              stake: formatUnits(BigInt(gameData?.[2]?.[3] ?? 0), 18),
             })
           }
         } catch {
@@ -453,36 +544,47 @@ export function App() {
         }
       }
       setPendingGames(pending.reverse().slice(0, 10))
+      setActiveGames(active.reverse().slice(0, 10))
     } catch (err) {
       console.error('Failed to fetch pending games:', err)
     }
   }, [contracts])
 
+  // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect
     fetchBalances()
-  }, [fetchBalances])
+    fetchBeginnerProtection()
+  }, [fetchBalances, fetchBeginnerProtection])
 
+  // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect
     fetchLeaderboard()
     fetchTreasury()
     fetchPendingGames()
+    fetchBeginnerProtection()
     const id = setInterval(() => {
       fetchLeaderboard()
       fetchTreasury()
       fetchPendingGames()
+      fetchBeginnerProtection()
     }, 30000)
     return () => clearInterval(id)
-  }, [fetchLeaderboard, fetchTreasury, fetchPendingGames])
+  }, [fetchLeaderboard, fetchTreasury, fetchPendingGames, fetchBeginnerProtection])
 
   return (
     <div className="app">
-      <PromoBanner />
       <Nav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        account={wallet.account}
-        onConnect={wallet.connect}
-        isConnecting={wallet.isConnecting}
+        account={activeWallet.account}
+        onConnect={() => {
+          setUseLocal(false)
+          void wallet.connect()
+        }}
+        isConnecting={wallet.isConnecting || localWallet.isConnecting}
+        onOpenLocalWallet={() => setShowLocalWalletModal(true)}
       />
       <ToastContainer />
       <main className="page-content">
@@ -490,11 +592,11 @@ export function App() {
           <PageContent
             activeTab={activeTab}
             contracts={contracts}
-            signer={wallet.signer}
-            provider={wallet.provider}
+            signer={activeWallet.signer}
+            provider={activeWallet.provider}
             yygBalance={yygBalance}
             sttBalance={sttBalance}
-            account={wallet.account}
+            account={activeWallet.account}
             onBalanceRefresh={fetchBalances}
             gameId={gameId}
             setGameId={setGameId}
@@ -504,6 +606,7 @@ export function App() {
             treasuryBalance={treasuryBalance}
             seasonDeadline={seasonDeadline}
             pendingGames={pendingGames}
+            activeGames={activeGames}
             session={session}
             fetchTreasury={fetchTreasury}
             showFlipCounts={showFlipCounts}
@@ -513,15 +616,30 @@ export function App() {
             }
             onRevokeSession={async () => session.revokeSession()}
             onNavigate={setActiveTab}
-            onConnect={wallet.connect}
+            onConnect={() => {
+              setUseLocal(false)
+              void wallet.connect()
+            }}
             aiGameState={aiGame.state}
             onAIStart={aiGame.startGame}
             onAIPlayerMove={aiGame.playerMove}
+            beginnerProtection={activeWallet.account ? {
+              active: beginnerProtectionActive,
+              matchesPlayed,
+              onToggle: toggleBeginnerProtection,
+              toggling: togglingProtection,
+            } : undefined}
           />
         </Suspense>
       </main>
       <YinYangStripe />
       <Footer onNavigate={setActiveTab} />
+      <LocalWalletModal
+        open={showLocalWalletModal}
+        onClose={() => setShowLocalWalletModal(false)}
+        wallet={localWallet}
+        onUnlocked={() => setUseLocal(true)}
+      />
     </div>
   )
 }

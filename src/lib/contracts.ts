@@ -1,9 +1,9 @@
-// --- Contract addresses ---
+// --- Contract addresses (Celo Sepolia Testnet) ---
 export const ADDRESSES = {
-  yyg: '0x86E9D0284Af16761AD1C3Ab0dbC5ddA6877eA51E',
-  elo: '0x423FBEf43A8de868758753f3E04c2733D3466099',
-  treasury: '0x713915Cc2ddB0E45622a7FC35E2A8c364784092A',
-  game: '0xf8B227247e432709438619a70Bf60710065239f9',
+  yyg: '0x3AD9B60fAC0E2856a061D7A2322bb2805Afa2319',
+  elo: '0xD004ce5B8871Fb1DFc91517cB88538499480BE2E',
+  treasury: '0x91CA09E43D3F12C2BBbAbd0c24De8E0798098fe6',
+  game: '0x6E883aa086386e6318aC81455Fc3598B583aa4fE',
 } as const
 
 // --- Human-readable ABIs ---
@@ -31,6 +31,11 @@ export const GAME_ABI = [
   'function sessions(address player, address sessionKey) view returns (uint256 gameId, uint64 expiryBlock)',
   'function games(uint256 gameId) view returns (uint64 blackBits, uint64 whiteBits, tuple(address playerAddr, uint64 dailyCount, uint256 lastPlayed, uint256 stake) p1, tuple(address playerAddr, uint64 dailyCount, uint256 lastPlayed, uint256 stake) p2, uint8 status, bool blackToMove, uint256 lastMoveBlock)',
   'function nextGameId() view returns (uint256)',
+  'function totalMatchesPlayed(address player) view returns (uint256)',
+  'function isBeginnerProtectionActive(address player) view returns (bool)',
+  'function setBeginnerProtection(bool enabled)',
+  'function beginnerProtectionDisabled(address player) view returns (bool)',
+  'event BeginnerProtectionToggled(address indexed player, bool enabled)',
   'event GameCreated(uint256 indexed gameId, address indexed challenger, uint256 stake)',
   'event SessionAuthorized(address indexed player, uint256 indexed gameId, address indexed key, uint64 expiryBlock)',
   'event SessionRevoked(address indexed player, address indexed key)',

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { BrowserProvider, JsonRpcSigner } from "ethers";
+import { AbstractProvider, BrowserProvider } from "ethers";
+import type { Signer } from "ethers";
 import { toast } from "../lib/toastBus";
 
 declare global {
@@ -14,15 +15,15 @@ declare global {
 
 export interface WalletState {
   account: string | null
-  provider: BrowserProvider | null
-  signer: JsonRpcSigner | null
+  provider: AbstractProvider | null
+  signer: Signer | null
   chainId: number | null
   isConnecting: boolean
   error: string | null
 }
 
-export const SOMNIA_CHAIN_ID_HEX = '0xc488' // 50312
-export const SOMNIA_CHAIN_ID_DEC = 50312
+export const CELO_SEPOLIA_CHAIN_ID_HEX = '0xaa044c' // 11142220
+export const CELO_SEPOLIA_CHAIN_ID_DEC = 11142220
 
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
@@ -34,11 +35,11 @@ export function useWallet() {
     error: null,
   })
 
-  const ensureSomniaNetwork = useCallback(async (ethereum: Exclude<Window['ethereum'], undefined>) => {
+  const ensureCeloNetwork = useCallback(async (ethereum: Exclude<Window['ethereum'], undefined>) => {
     try {
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: SOMNIA_CHAIN_ID_HEX }],
+        params: [{ chainId: CELO_SEPOLIA_CHAIN_ID_HEX }],
       })
     } catch (err) {
       // SAFETY: EIP-1193 switch errors are objects carrying a numeric `code`
@@ -62,14 +63,13 @@ export function useWallet() {
         method: 'wallet_addEthereumChain',
         params: [
           {
-            chainId: SOMNIA_CHAIN_ID_HEX,
-            chainName: 'Somnia Shannon Testnet',
-            nativeCurrency: { name: 'Somnia Test Token', symbol: 'STT', decimals: 18 },
+            chainId: CELO_SEPOLIA_CHAIN_ID_HEX,
+            chainName: 'Celo Sepolia Testnet',
+            nativeCurrency: { name: 'Celo', symbol: 'CELO', decimals: 18 },
             rpcUrls: [
-              'https://dream-rpc.somnia.network',
-              'https://api.infra.testnet.somnia.network',
+              'https://forno.celo-sepolia.celo-testnet.org',
             ],
-            blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
+            blockExplorerUrls: ['https://celo-sepolia.blockscout.com'],
           },
         ],
       })
@@ -96,14 +96,14 @@ export function useWallet() {
         throw new Error('No accounts found. Please unlock MetaMask.')
       }
 
-      await ensureSomniaNetwork(window.ethereum)
+      await ensureCeloNetwork(window.ethereum)
 
       const provider = new BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
       const network = await provider.getNetwork()
 
-      if (Number(network.chainId) !== SOMNIA_CHAIN_ID_DEC) {
-        const errorMsg = 'Wrong network: Please switch MetaMask to Somnia Shannon (Chain ID 50312)'
+      if (Number(network.chainId) !== CELO_SEPOLIA_CHAIN_ID_DEC) {
+        const errorMsg = 'Wrong network: Please switch MetaMask to Celo Sepolia (Chain ID 11142220)'
         setState({
           account: null,
           provider: null,
@@ -145,7 +145,7 @@ export function useWallet() {
       }))
       toast('error', message.slice(0, 150))
     }
-  }, [ensureSomniaNetwork])
+  }, [ensureCeloNetwork])
 
   // Auto-connect if already authorized
   useEffect(() => {
@@ -159,7 +159,7 @@ export function useWallet() {
         if (accounts && accounts.length > 0) {
           const provider = new BrowserProvider(window.ethereum!)
           const network = await provider.getNetwork()
-          if (Number(network.chainId) === SOMNIA_CHAIN_ID_DEC) {
+          if (Number(network.chainId) === CELO_SEPOLIA_CHAIN_ID_DEC) {
             const signer = await provider.getSigner()
             setState({
               account: accounts[0],
@@ -192,7 +192,7 @@ export function useWallet() {
         const provider = new BrowserProvider(window.ethereum!)
         provider.getSigner().then(signer => {
           provider.getNetwork().then(network => {
-            if (Number(network.chainId) === SOMNIA_CHAIN_ID_DEC) {
+            if (Number(network.chainId) === CELO_SEPOLIA_CHAIN_ID_DEC) {
               setState(s => ({ ...s, account: accounts[0], provider, signer, chainId: Number(network.chainId), error: null }))
             } else {
               setState(s => ({ ...s, account: null, provider: null, signer: null, chainId: Number(network.chainId), error: 'Wrong network' }))

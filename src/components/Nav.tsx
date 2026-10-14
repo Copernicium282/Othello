@@ -7,6 +7,7 @@ export interface NavProps {
   account: string | null
   onConnect: () => void
   isConnecting: boolean
+  onOpenLocalWallet: () => void
 }
 
 const tabs: { id: Tab; label: string }[] = [
@@ -18,7 +19,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'wrap', label: 'Wrap/Unwrap' },
 ]
 
-export function Nav({ activeTab, onTabChange, account, onConnect, isConnecting }: NavProps) {
+export function Nav({ activeTab, onTabChange, account, onConnect, isConnecting, onOpenLocalWallet }: NavProps) {
   return (
     <nav className="primary-nav">
       <div className="nav-inner">
@@ -37,7 +38,14 @@ export function Nav({ activeTab, onTabChange, account, onConnect, isConnecting }
         </div>
 
         <button
-          className="button-primary nav-wallet-btn"
+          className="button-secondary nav-wallet-btn nav-wallet-btn--browser"
+          onClick={onOpenLocalWallet}
+          type="button"
+        >
+          Browser Wallet
+        </button>
+        <button
+          className="button-primary nav-wallet-btn nav-wallet-btn--primary"
           onClick={onConnect}
           disabled={isConnecting}
         >

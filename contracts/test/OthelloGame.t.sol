@@ -145,6 +145,43 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         assertEq(elo.getELO(bob), 1160e18);
     }
 
+    function test_BeginnerProtection_ActiveForFirstFiveMatches() public {
+        assertTrue(harness.isBeginnerProtectionActive(alice), "active at 0 matches");
+        harness.seedMatchesPlayed(alice, 4);
+        assertTrue(harness.isBeginnerProtectionActive(alice), "active at 4 matches");
+        harness.seedMatchesPlayed(alice, 5);
+        assertFalse(harness.isBeginnerProtectionActive(alice), "inactive at 5 matches");
+    }
+
+    function test_BeginnerProtection_ToggleOptOut() public {
+        assertTrue(harness.isBeginnerProtectionActive(alice), "active initially");
+        vm.prank(alice);
+        harness.setBeginnerProtection(false); // opt out early
+        assertFalse(harness.isBeginnerProtectionActive(alice), "inactive when disabled");
+        vm.prank(alice);
+        harness.setBeginnerProtection(true); // opt back in
+        assertTrue(harness.isBeginnerProtectionActive(alice), "active again when re-enabled under 5 matches");
+    }
+
+    function test_Settle_UpdatesEloAfterFiveMatches() public {
+        harness.seedBoard(0, 0x7, 0x8); // 3 black > 1 white -> black wins
+        harness.seedStake(0, alice, 100e18, bob, 120e18);
+        _setElo(0, alice, 1200e18);
+        _setElo(0, bob, 1200e18);
+
+        // Both players have played 5 matches
+        harness.seedMatchesPlayed(alice, 5);
+        harness.seedMatchesPlayed(bob, 5);
+
+        harness.settle(0);
+
+        // Rated win, ELO recorded!
+        assertGt(elo.getELO(alice), 1200e18, "winner ELO increased");
+        assertLt(elo.getELO(bob), 1200e18, "loser ELO decreased");
+        assertEq(harness.totalMatchesPlayed(alice), 6, "matches incremented to 6");
+        assertEq(harness.totalMatchesPlayed(bob), 6, "matches incremented to 6");
+    }
+
     // 5.3C end-to-end: makeMove -> game-over detection -> _settle.
     // Artifical endgame: board has 62 black pieces + 1 white piece; bit 0 is empty
     // AND legal for black (it flanks white@bit1). One makeMove fills the board
@@ -444,11 +481,13 @@ contract OthelloGameTest is Test, OthelloGame(address(0), address(0), address(0)
         _setElo(0, alice, 2500e18);
         _setElo(0, bob, 1200e18); // diff 1300e18 -> recordResult would revert
 
-        // Seed 3 distinct opponents for both players so the recordResult gate fires.
+        // Seed 3 distinct opponents and >= 5 matches played for both players so the beginner protection gate opens.
         address[3] memory aliceOpponents = [makeAddr("ao1"), makeAddr("ao2"), makeAddr("ao3")];
         address[3] memory bobOpponents = [makeAddr("bo1"), makeAddr("bo2"), makeAddr("bo3")];
         harness.seedHistory(alice, aliceOpponents);
         harness.seedHistory(bob, bobOpponents);
+        harness.seedMatchesPlayed(alice, 5);
+        harness.seedMatchesPlayed(bob, 5);
 
         uint256 a0 = yyg.balanceOf(alice);
         uint256 b0 = yyg.balanceOf(bob);

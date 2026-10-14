@@ -163,7 +163,11 @@ contract OthelloGame is Ownable {
     uint256 constant TIMEOUT = 24 hours;
     mapping(uint256 dayIdx => mapping(address player => Player)) public dailyGamesCap;
     error Exceeded_Daily_Cap(uint256 waitTime);
-    mapping(address player => mapping(address opponent => uint256 lastPlayed)) public cooldownPerOpponent;
+    struct CooldownTracker {
+        uint256 windowStart;
+        uint8 matchesInWindow;
+    }
+    mapping(address player => mapping(address opponent => CooldownTracker)) public cooldownPerOpponent;
     error Cooldown_Valid(uint256 waitTime);
 
     struct History {
@@ -171,6 +175,23 @@ contract OthelloGame is Ownable {
         uint8 len;
     }
     mapping(address => History) public contestantHistory;
+    mapping(address => uint256) public totalMatchesPlayed;
+    uint8 public constant BEGINNER_MATCH_COUNT = 5;
+    mapping(address => bool) public beginnerProtectionDisabled;
+
+    event BeginnerProtectionToggled(address indexed player, bool enabled);
+
+    function setBeginnerProtection(bool enabled) external {
+        beginnerProtectionDisabled[msg.sender] = !enabled;
+        emit BeginnerProtectionToggled(msg.sender, enabled);
+    }
+
+    function isBeginnerProtectionActive(address player) public view returns (bool) {
+        if (beginnerProtectionDisabled[player]) {
+            return false;
+        }
+        return totalMatchesPlayed[player] < BEGINNER_MATCH_COUNT;
+    }
 
     function antiFarmingChecksHelper(address opponent) internal returns (bool) {
         if (block.timestamp / 86400 > dayIndex) {
@@ -180,11 +201,11 @@ contract OthelloGame is Ownable {
         if (Challenger.dailyCount >= DAILY_CAP) {
             revert Exceeded_Daily_Cap({waitTime: (block.timestamp - Challenger.lastPlayed) / 86400});
         }
-        if (
-            cooldownPerOpponent[msg.sender][opponent] > 0
-                && block.timestamp < cooldownPerOpponent[msg.sender][opponent] + 3600
-        ) {
-            revert Cooldown_Valid({waitTime: cooldownPerOpponent[msg.sender][opponent] + 3600 - block.timestamp});
+        CooldownTracker storage tracker = cooldownPerOpponent[msg.sender][opponent];
+        if (tracker.windowStart > 0 && block.timestamp < tracker.windowStart + 3600) {
+            if (tracker.matchesInWindow >= 2) {
+                revert Cooldown_Valid({waitTime: tracker.windowStart + 3600 - block.timestamp});
+            }
         }
 
         return true;
@@ -288,9 +309,19 @@ contract OthelloGame is Ownable {
         dailyGamesCap[dayIndex][Challenger.playerAddr].dailyCount++;
         dailyGamesCap[dayIndex][Opponent.playerAddr].dailyCount++;
         dailyGamesCap[dayIndex][Challenger.playerAddr].lastPlayed = block.timestamp;
-        dailyGamesCap[dayIndex][Opponent.playerAddr].lastPlayed = block.timestamp;
-        cooldownPerOpponent[Challenger.playerAddr][Opponent.playerAddr] = block.timestamp;
-        cooldownPerOpponent[Opponent.playerAddr][Challenger.playerAddr] = block.timestamp;
+        // Update cooldown window for both players
+        _recordMatchBetween(Challenger.playerAddr, Opponent.playerAddr);
+        _recordMatchBetween(Opponent.playerAddr, Challenger.playerAddr);
+    }
+
+    function _recordMatchBetween(address p1, address p2) internal {
+        CooldownTracker storage tracker = cooldownPerOpponent[p1][p2];
+        if (tracker.windowStart == 0 || block.timestamp >= tracker.windowStart + 3600) {
+            tracker.windowStart = block.timestamp;
+            tracker.matchesInWindow = 1;
+        } else {
+            tracker.matchesInWindow++;
+        }
     }
 
     function resolveTimeout(uint256 gameId) external {
@@ -480,20 +511,25 @@ contract OthelloGame is Ownable {
                 hO.opponents[9] = Challenger.playerAddr;
             }
         }
+        // Increment total matches played for both players
+        totalMatchesPlayed[Challenger.playerAddr]++;
+        totalMatchesPlayed[Opponent.playerAddr]++;
+
+        bool canUpdateElo = !isBeginnerProtectionActive(Challenger.playerAddr) && !isBeginnerProtectionActive(Opponent.playerAddr);
 
         if (eloDiff <= 400e18) {
             if (blackCount > whiteCount) {
                 if (!YYG_TOKEN.transfer(Challenger.playerAddr, gameStake * 96 / 100)) revert StakeTransferFailed();
                 othelloTreasury.receive4Percent(gameStake * 4 / 100);
 
-                if (distinctOpponents(Challenger.playerAddr) && distinctOpponents(Opponent.playerAddr)) {
+                if (canUpdateElo) {
                     OthelloELO_Contract.recordResult(Challenger.playerAddr, Opponent.playerAddr);
                 }
             } else if (whiteCount > blackCount) {
                 if (!YYG_TOKEN.transfer(Opponent.playerAddr, gameStake * 96 / 100)) revert StakeTransferFailed();
                 othelloTreasury.receive4Percent(gameStake * 4 / 100);
 
-                if (distinctOpponents(Opponent.playerAddr) && distinctOpponents(Challenger.playerAddr)) {
+                if (canUpdateElo) {
                     OthelloELO_Contract.recordResult(Opponent.playerAddr, Challenger.playerAddr);
                 }
             } else {
@@ -510,7 +546,7 @@ contract OthelloGame is Ownable {
             if (!YYG_TOKEN.transfer(Opponent.playerAddr, Opponent.stake * 96 / 100)) revert StakeTransferFailed();
             othelloTreasury.receive4Percent(gameStake * 4 / 100);
 
-            if (eloDiff <= 800e18 && distinctOpponents(Challenger.playerAddr) && distinctOpponents(Opponent.playerAddr))
+            if (eloDiff <= 800e18 && canUpdateElo)
             {
                 if (blackCount > whiteCount) {
                     OthelloELO_Contract.recordResult(Challenger.playerAddr, Opponent.playerAddr);
@@ -547,6 +583,10 @@ contract OthelloGameHarness is OthelloGame {
         h.opponents[0] = opponents[0];
         h.opponents[1] = opponents[1];
         h.opponents[2] = opponents[2];
+    }
+
+    function seedMatchesPlayed(address player, uint256 count) external {
+        totalMatchesPlayed[player] = count;
     }
 
     function seedStake(uint256 id, address p1, uint256 s1, address p2, uint256 s2) external {

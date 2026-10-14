@@ -20,11 +20,18 @@ export interface GameViewProps {
   onAcceptGame?: (gameId: string) => void
   onSelectGame?: (gameId: string) => void
   pendingGames?: Array<{ gameId: string; challenger: string; stake: string }>
+  activeGames?: Array<{ gameId: string; black: string; white: string; stake: string }>
   showFlipCounts?: boolean
   onToggleFlipCounts?: () => void
   onRenewSession: (gameId: string) => Promise<SessionResult>
   onRevokeSession: () => Promise<SessionResult>
   session: SessionActions
+  beginnerProtection?: {
+    active: boolean
+    matchesPlayed: number
+    onToggle: (enabled: boolean) => Promise<void>
+    toggling?: boolean
+  }
 }
 
 type SessionChip = 'session' | 'expired' | 'direct'
@@ -36,6 +43,7 @@ function chipFromStatus(status: SessionStatus, inThisGame: boolean): SessionChip
 }
 
 function shorten(addr: string): string {
+  if (!addr || addr.length <= 10) return addr || ''
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
@@ -54,18 +62,22 @@ export function GameView({
   onAcceptGame,
   onSelectGame,
   pendingGames = [],
+  activeGames = [],
   showFlipCounts = false,
   onToggleFlipCounts,
   onRenewSession,
   onRevokeSession,
   session,
+  beginnerProtection,
 }: GameViewProps) {
   const [sessionChip, setSessionChip] = useState<SessionChip>('direct')
   const [renewing, setRenewing] = useState(false)
   const [revoking, setRevoking] = useState(false)
   const [cancelled, setCancelled] = useState(false)
 
+  // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect
     setCancelled(false)
   }, [gameId])
 
@@ -73,9 +85,16 @@ export function GameView({
     account !== null &&
     (account.toLowerCase() === game.p1Addr.toLowerCase() ||
       account.toLowerCase() === game.p2Addr.toLowerCase())
+  const isSpectator = !inThisGame
 
+  // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     let cancelled = false
+    if (!inThisGame) {
+      // eslint-disable-next-line react/set-state-in-effect
+      setSessionChip('direct')
+      return
+    }
     if (gameId) {
       session.isSessionActive(gameId).then(status => {
         if (!cancelled) setSessionChip(chipFromStatus(status, inThisGame))
@@ -132,7 +151,7 @@ export function GameView({
   const previewWhite = game.blackBits === 0n && game.whiteBits === 0n ? DEFAULT_WHITE : game.whiteBits
 
   const handleCellClick = async (position: number) => {
-    if (!contracts || !gameId || !account) return
+    if (!contracts || !gameId || !account || !inThisGame) return
     onMovePending(true)
     let moveSucceeded = false
     try {
@@ -196,33 +215,53 @@ export function GameView({
             >
               flip #{showFlipCounts ? 'on' : 'off'}
             </button>
-            <span
-              className="flip-toggle"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'default' }}
-            >
-              <span
-                className="game-status-bar__dot"
-                style={{
-                  background:
-                    sessionChip === 'session' ? '#2e9e44' : sessionChip === 'expired' ? '#d9a514' : '#9a938b',
-                  border: `1px solid ${
-                    sessionChip === 'session' ? '#1e7a33' : sessionChip === 'expired' ? '#a87f0a' : '#6e6a64'
-                  }`,
+            {gameId && (
+              <button
+                className="flip-toggle"
+                type="button"
+                onClick={async () => {
+                  const link = `${window.location.origin}${window.location.pathname}?game=${encodeURIComponent(gameId)}`
+                  try {
+                    if (!navigator.clipboard) throw new Error('clipboard-unavailable')
+                    await navigator.clipboard.writeText(link)
+                    toast('success', 'Game link copied')
+                  } catch {
+                    toast('error', 'Could not copy link')
+                  }
                 }}
-              />
-              {sessionChip === 'session' ? 'Session' : sessionChip === 'expired' ? 'Expired' : 'Direct'}
-              {sessionChip === 'expired' && (
-                <button
-                  className="flip-toggle"
-                  disabled={renewing}
-                  onClick={handleRenew}
-                >
-                  Renew
-                </button>
-              )}
-            </span>
+              >
+                Copy link
+              </button>
+            )}
+            {!isSpectator && (
+              <span
+                className="flip-toggle"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'default' }}
+              >
+                <span
+                  className="game-status-bar__dot"
+                  style={{
+                    background:
+                      sessionChip === 'session' ? '#2e9e44' : sessionChip === 'expired' ? '#d9a514' : '#9a938b',
+                    border: `1px solid ${
+                      sessionChip === 'session' ? '#1e7a33' : sessionChip === 'expired' ? '#a87f0a' : '#6e6a64'
+                    }`,
+                  }}
+                />
+                {sessionChip === 'session' ? 'Session' : sessionChip === 'expired' ? 'Expired' : 'Direct'}
+                {sessionChip === 'expired' && (
+                  <button
+                    className="flip-toggle"
+                    disabled={renewing}
+                    onClick={handleRenew}
+                  >
+                    Renew
+                  </button>
+                )}
+              </span>
+            )}
             <span className="game-view__opponent">
-              {opponent ? `vs ${shorten(opponent)}` : ''}
+              {isSpectator ? 'Spectating' : opponent ? `vs ${shorten(opponent)}` : ''}
             </span>
           </div>
           <Board
@@ -235,6 +274,11 @@ export function GameView({
             blackToMove={game.blackToMove}
             showFlipCounts={showFlipCounts}
           />
+          {isSpectator && (
+            <div style={{ marginTop: '8px', color: '#666', fontSize: '13px' }}>
+              Spectating (read-only)
+            </div>
+          )}
         </>
       )}
 
@@ -261,15 +305,34 @@ export function GameView({
                   ? 'You won! YYG has been sent to your wallet.'
                   : 'You lost. Better luck next time.'}
           </div>
-          {(sessionChip === 'session' || sessionChip === 'expired') && (
+          <div className="game-over__actions" style={{ marginTop: 'var(--space-md)', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {!isSpectator && opponent && onCreateGame && (
+              <button
+                className="game-lobby__button game-lobby__button--primary"
+                style={{ width: 'auto', padding: '0 24px' }}
+                disabled={txPending}
+                onClick={() => onCreateGame(opponent, '10')}
+              >
+                Request Rematch (10 YYG)
+              </button>
+            )}
             <button
-              className="flip-toggle"
-              disabled={revoking}
-              onClick={handleRevoke}
+              className="game-lobby__button game-lobby__button--yang"
+              style={{ width: 'auto', padding: '0 24px' }}
+              onClick={() => onSelectGame?.('')}
             >
-              Revoke session
+              Back to Lobby
             </button>
-          )}
+            {!isSpectator && (sessionChip === 'session' || sessionChip === 'expired') && (
+              <button
+                className="flip-toggle"
+                disabled={revoking}
+                onClick={handleRevoke}
+              >
+                Revoke session
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -314,6 +377,8 @@ export function GameView({
             onSelectGame={onSelectGame}
             disabled={txPending}
             pendingGames={pendingGames}
+            activeGames={activeGames}
+            beginnerProtection={beginnerProtection}
           />
         </>
       )}

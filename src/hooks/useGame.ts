@@ -111,8 +111,10 @@ export function useGame(
     }
   }
 
+  // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (!gameId || !contracts) {
+      // eslint-disable-next-line react/set-state-in-effect
       setState(DEFAULT_STATE)
       return
     }
@@ -131,7 +133,7 @@ export function useGame(
     }
 
     runFetch()
-    // Somnia sub-second blocks: poll every 1.2s for snappy board updates
+    // Celo Sepolia sub-second blocks: poll every 1.2s for snappy board updates
     const id = setInterval(runFetch, 1200)
 
     return () => {

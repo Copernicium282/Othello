@@ -11,9 +11,9 @@ export const client = createThirdwebClient({
   clientId,
 })
 
-export const somniaShannon = defineChain({
-  id: 50312,
-  name: 'Somnia Shannon Testnet',
-  nativeCurrency: { name: 'STT', symbol: 'STT', decimals: 18 },
-  rpc: 'https://api.infra.testnet.somnia.network',
+export const celoSepolia = defineChain({
+  id: 11142220,
+  name: 'Celo Sepolia Testnet',
+  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+  rpc: 'https://forno.celo-sepolia.celo-testnet.org',
 })

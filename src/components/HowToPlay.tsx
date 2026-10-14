@@ -23,7 +23,7 @@ export function HowToPlay({
 
       <h2>Getting Started</h2>
       <p>
-        Othello.s runs on the Somnia Shannon testnet, so everything you need is free.
+        Othello.s runs on the Sepolia CELO testnet, so everything you need is free.
         The setup takes about five minutes.
       </p>
       <ol className="howtoplay-steps">
@@ -50,8 +50,8 @@ export function HowToPlay({
             <strong>Connect your wallet.</strong>{' '}
             <span>
               Click Connect Wallet. MetaMask will prompt you to
-              add or switch to the Somnia Shannon network (RPC{' '}
-              <code>dream-rpc.somnia.network</code>, Chain ID <code>50312</code>
+              add or switch to the Sepolia CELO network (RPC{' '}
+              <code>forno.celo-sepolia.celo-testnet.org</code>, Chain ID <code>11142220</code>
               ). Approve it and you're connected.
             </span>
           </div>
@@ -63,16 +63,16 @@ export function HowToPlay({
         </li>
         <li className="howtoplay-step">
           <div className="howtoplay-step__body">
-            <strong>Get free testnet STT.</strong>{' '}
+            <strong>Get free testnet CELO.</strong>{' '}
             <span>
-              STT pays for transaction fees. Request it for your address from the
-              Somnia Shannon faucet.
+              CELO pays for transaction fees. Request it for your address from the
+              Sepolia CELO faucet.
             </span>
           </div>
           <div className="howtoplay-step__actions">
             <a
               className="button-secondary"
-              href="https://cloud.google.com/application/web3/faucet/somnia/shannon"
+              href="https://faucet.celo.org/sepolia"
               target="_blank"
               rel="noreferrer"
             >
@@ -82,10 +82,10 @@ export function HowToPlay({
         </li>
         <li className="howtoplay-step">
           <div className="howtoplay-step__body">
-            <strong>Wrap STT into YYG.</strong>{' '}
+            <strong>Wrap CELO into YYG.</strong>{' '}
             <span>
               YYG is the token you stake on games, wrapped at the fixed rate of
-              1 STT = 100,000 YYG.
+              1 CELO = 100,000 YYG.
             </span>
           </div>
           <div className="howtoplay-step__actions">
@@ -104,7 +104,7 @@ export function HowToPlay({
             <span>
               Pick an opponent (any wallet address) and a stake in YYG. Your wallet
               creates the game and authorizes a session key in a single transaction
-              (the session key is funded with 0.1 STT so your moves need no
+              (the session key is funded with 0.1 CELO so your moves need no
               confirmations).
             </span>
           </div>
@@ -259,13 +259,13 @@ export function HowToPlay({
 
       <h2>How Othello.s Works</h2>
       <p>
-        Othello.s brings the classic game fully on-chain on Somnia Shannon, a network
+        Othello.s brings the classic game fully on-chain on Sepolia CELO, a network
         with 100ms block times. Here is how it all fits together.
       </p>
       <ul>
         <li>
-          <strong>Wrapping.</strong> You wrap STT into YYG tokens at a fixed rate of
-          1 STT = 100,000 YYG. Both players in a game must hold YYG to stake.
+          <strong>Wrapping.</strong> You wrap CELO into YYG tokens at a fixed rate of
+          1 CELO = 100,000 YYG. Both players in a game must hold YYG to stake.
         </li>
         <li>
           <strong>Creating and accepting games.</strong> One player creates a game and
@@ -273,7 +273,7 @@ export function HowToPlay({
           Both stakes are locked in the contract until the game concludes.
         </li>
         <li>
-          <strong>On-chain moves.</strong> Each move is a transaction on Somnia Shannon.
+          <strong>On-chain moves.</strong> Each move is a transaction on Sepolia CELO.
           The board is represented as a bitboard: a compact format where each of the 64
           positions maps to a single bit in a uint64 value. Move validation happens
           entirely in the smart contract, so cheating is impossible.

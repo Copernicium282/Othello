@@ -138,14 +138,14 @@ export function WrapUnwrap({
     <div className="wrap-unwrap">
       <div className="wrap-unwrap-card card-feature">
         <div className="balance-label">
-          <div>STT Balance: {sttBalance}</div>
+          <div>CELO Balance: {sttBalance}</div>
           <div style={{ marginTop: 'var(--space-xs)' }}>YYG Balance: {yygBalance}</div>
         </div>
 
         <div className="wrap-section">
-          <span className="eyebrow">Wrap STT to YYG</span>
+          <span className="eyebrow">Wrap CELO to YYG</span>
           <p className="body-sm text-slate">
-            Convert your STT into YinYang tokens at a 1:100,000 ratio
+            Convert your CELO into YinYang tokens at a 1:100,000 ratio
           </p>
 
           <div className="input-row">
@@ -160,7 +160,7 @@ export function WrapUnwrap({
               {yygAmount || '0'}
             </div>
           </div>
-          <div className="ratio-label">1 STT = 100,000 YYG</div>
+          <div className="ratio-label">1 CELO = 100,000 YYG</div>
 
           <button
             className="button-primary"
@@ -173,18 +173,18 @@ export function WrapUnwrap({
           <button
             className="button-secondary"
             style={{ marginTop: 'var(--space-xs)', width: '100%', fontSize: '13px' }}
-            onClick={() => window.open('https://cloud.google.com/application/web3/faucet/somnia/shannon', '_blank')}
+            onClick={() => window.open('https://faucet.celo.org/sepolia', '_blank')}
           >
-            Get STT Testnet Tokens
+            Get CELO Testnet Tokens
           </button>
         </div>
 
         <div className="wrap-divider" />
 
         <div className="unwrap-section">
-          <span className="eyebrow">Unwrap YYG to STT</span>
+          <span className="eyebrow">Unwrap YYG to CELO</span>
           <p className="body-sm text-slate">
-            Convert your YinYang tokens back to STT at a 1:100,000 ratio
+            Convert your YinYang tokens back to CELO at a 1:100,000 ratio
           </p>
 
           <div className="input-row">
@@ -199,7 +199,7 @@ export function WrapUnwrap({
               {sttOutput || '0.000000'}
             </div>
           </div>
-          <div className="ratio-label">100,000 YYG = 1 STT</div>
+          <div className="ratio-label">100,000 YYG = 1 CELO</div>
 
           <button
             className="button-primary button-yang"

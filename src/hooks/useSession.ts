@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Contract, Interface, JsonRpcProvider, Wallet } from 'ethers'
-import type { BrowserProvider, JsonRpcSigner } from 'ethers'
+import type { AbstractProvider, Signer } from 'ethers'
 import { ADDRESSES } from '../lib/contracts'
 
 const SESSIONS_ABI = [
   'function sessions(address player, address sessionKey) view returns (uint256 gameId, uint64 expiryBlock)',
 ] as const
 
-const SESSION_FUND_WEI = 10n ** 17n // 0.1 STT
-const SOMNIA_RPC_URL = 'https://dream-rpc.somnia.network'
+const SESSION_FUND_WEI = 5n * (10n ** 15n) // 0.005 CELO
+const CELO_RPC_URL = 'https://forno.celo-sepolia.celo-testnet.org'
 
 export interface SessionKeyInfo {
   address: string
@@ -41,8 +41,8 @@ export interface SessionApi extends SessionActions {
 }
 
 export interface UseSessionOptions {
-  provider: BrowserProvider | null
-  signer: JsonRpcSigner | null
+  provider: AbstractProvider | null
+  signer: Signer | null
   account: string | null
 }
 
@@ -79,9 +79,11 @@ export function useSession(
   const [sessionKey, setSessionKey] = useState<SessionKeyInfo>(() => getSessionKeyForAccount(account))
 
   // Sync session key whenever account changes
+  // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (account) {
       const current = getSessionKeyForAccount(account)
+      // eslint-disable-next-line react/set-state-in-effect
       setSessionKey(current)
     }
   }, [account])
@@ -185,7 +187,7 @@ export function useSession(
       const status = await isSessionActive(gameId)
       if (!status.active) return { ok: false, reason: 'no-session' }
       try {
-        const sessionProvider = new JsonRpcProvider(SOMNIA_RPC_URL)
+        const sessionProvider = new JsonRpcProvider(CELO_RPC_URL)
         const sessionKeyWallet = new Wallet(sessionKey.privateKey, sessionProvider)
         const moveData = new Interface(['function moveFor(address player, uint256 gameId, uint8 pos)']).encodeFunctionData(
           'moveFor',

@@ -33,4 +33,4 @@ contracts/broadcast/
 *.sw?
 
 # Vendored oxlint plugin
-tools/oxlint/anti-slop
+tools/*

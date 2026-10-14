@@ -82,7 +82,7 @@
   background-color: var(--color-yin);
 }
 
-/* ─── Wallet Button : pushed to right edge ─── */
+/* ─── Wallet Buttons : right-edge taps ─── */
 .nav-wallet-btn {
   padding: 0 var(--space-xl);
   font-family: var(--font-mono);
@@ -92,8 +92,6 @@
   text-transform: uppercase;
   border: none;
   border-left: 1px solid var(--color-divide);
-  background-color: transparent;
-  color: var(--color-ink-tint);
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -101,7 +99,30 @@
               background-color var(--duration-fast) var(--ease-default);
 }
 
-.nav-wallet-btn:hover {
+/* Browser wallet: low-emphasis, opt-in/testnet */
+.nav-wallet-btn--browser {
+  background-color: transparent;
+  color: var(--color-slate);
+}
+
+.nav-wallet-btn--browser:hover {
   color: var(--color-yin);
   background-color: var(--color-surface);
+}
+
+/* Connect wallet: primary amber CTA, stays far right */
+.nav-wallet-btn--primary {
+  background-color: var(--color-yin);
+  color: var(--color-on-yin);
+  border-left: 1px solid var(--color-yin-deep);
+}
+
+.nav-wallet-btn--primary:hover {
+  background-color: var(--color-yin-deep);
+  color: var(--color-on-yin);
+}
+
+.nav-wallet-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
